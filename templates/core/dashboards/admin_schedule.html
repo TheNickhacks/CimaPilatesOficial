@@ -137,7 +137,7 @@
                             <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
                             <p class="mt-1 text-xs {% if slot.is_blocked %}text-ivory/80{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
                           </div>
-                          <span class="inline-flex w-fit max-w-full rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none {% if slot.is_blocked %}bg-ivory/15 text-ivory{% else %}bg-olive text-ivory{% endif %}">
+                          <span class="inline-flex w-fit max-w-full rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none {% if slot.is_blocked %}bg-ivory/15 text-ivory{% else %}bg-olive text-ivory{% endif %}">
                             {% if slot.is_blocked %}Bloqueada{% else %}Agenda{% endif %}
                           </span>
                         </div>

@@ -147,7 +147,7 @@
                             <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
                             <p class="mt-1 text-xs {% if slot.is_booked %}text-ivory/80{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
                           </div>
-                          <span class="shrink-0 self-start rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none {% if slot.is_booked %}bg-ivory/15 text-ivory{% elif slot.can_book %}bg-olive text-ivory{% else %}bg-cloud/70 text-charcoal/70{% endif %}">
+                          <span class="shrink-0 self-start rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none {% if slot.is_booked %}bg-ivory/15 text-ivory{% elif slot.can_book %}bg-olive text-ivory{% else %}bg-cloud/70 text-charcoal/70{% endif %}">
                             {% if slot.is_booked %}
                               Reservada
                             {% elif slot.can_book %}

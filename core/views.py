@@ -45,7 +45,7 @@ TRANSFER_DETAILS = (
 	("Correo", "nnavarrogarrido02@gmail.com"),
 )
 
-DISPLAY_SCHEDULE_DAYS = 14
+DISPLAY_SCHEDULE_DAYS = 21
 TEACHER_DASHBOARD_DAYS = 21
 BOOKING_OPEN_DELTA = timedelta(days=7)
 DEFAULT_CLASS_CAPACITY = 4
@@ -248,7 +248,7 @@ def _get_week_bounds_from_datetime(value):
 
 
 def _generate_day_slots(day):
-	if holidays_cl.is_holiday(day):
+	if holidays_cl.is_holiday(day) or day.weekday() == 6:
 		return
 	for start_time, end_time in STUDIO_SLOT_TIMES.get(day.weekday(), ()):
 		yield _combine_local_datetime(day, start_time), _combine_local_datetime(day, end_time)
@@ -640,6 +640,8 @@ def _booking_window_allows_session(class_session, now=None):
 	starts_at = _get_session_local_datetime(class_session.starts_at)
 	if getattr(class_session, "is_blocked", False):
 		return False, class_session.blocked_reason or "Este bloque fue bloqueado por administración."
+	if starts_at.weekday() == 6:
+		return False, "No hay clases disponibles los domingos."
 	holiday_name = holidays_cl.get_holiday_name(starts_at.date())
 	if holiday_name:
 		return False, f"No hay clases disponibles por feriado: {holiday_name}."
@@ -838,9 +840,10 @@ def _count_teacher_effective_minutes(month_sessions):
 
 def _build_schedule_context(user, active_plan_request):
 	today = timezone.localdate()
-	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
-	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	week_start_date = today - timedelta(days=today.weekday())
+	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
 	now = timezone.now()
 	sessions = list(
 		ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end)
@@ -934,9 +937,10 @@ def _format_session_label(class_session):
 
 def _build_public_single_class_context(selected_session_id=None, booking_form=None):
 	today = timezone.localdate()
-	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
-	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	week_start_date = today - timedelta(days=today.weekday())
+	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
 	now = timezone.now()
 	sessions = list(
 		ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end)
@@ -1417,9 +1421,10 @@ def teacher_dashboard(request):
 
 def _build_admin_overview_context():
 	today = timezone.localdate()
-	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
-	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	week_start_date = today - timedelta(days=today.weekday())
+	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
 	sessions = list(ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"))
 	capacity_maps = _get_capacity_maps(sessions)
 	total_capacity = sum(session.capacidad_maxima for session in sessions)
@@ -1607,9 +1612,10 @@ def admin_dashboard(request):
 @admin_required
 def admin_schedule_view(request):
 	today = timezone.localdate()
-	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
-	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	week_start_date = today - timedelta(days=today.weekday())
+	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
 
 	if request.method == "POST":
 		action = request.POST.get("action")
