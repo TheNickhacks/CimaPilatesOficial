@@ -8,6 +8,85 @@
     <p class="mt-3 max-w-2xl leading-relaxed text-ivory/75">Acceso a configuraciones, estadísticas, tickets y procesos de anonimización / borrado de datos.</p>
   </div>
 
+  <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Ocupación</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_occupancy_percent }}%</p>
+      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_total_occupied }} de {{ dashboard_total_capacity }} cupos ocupados en la ventana visible.</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Asistencia</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_attendance_percent }}%</p>
+      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_present_attendance_count }} asistencias marcadas sobre los cupos reservados.</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Bloqueadas</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_blocked_session_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Clases bloqueadas por administración dentro de la agenda activa.</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Profesoras</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_teacher_summary_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Seguimiento mensual de horas efectivas por docente.</p>
+    </div>
+  </div>
+
+  <div class="mt-8 grid gap-4 lg:grid-cols-2">
+    <a href="{% url 'core:admin_schedule' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda administrativa</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Validar clases y agendar manualmente</h2>
+      <p class="mt-3 text-sm text-charcoal/70">Revisa cupos, bloquea clases, confirma ocupación y agenda usuarias usando su correo.</p>
+    </a>
+    <a href="{% url 'core:admin_plan_pricing' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Precios de planes</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Editar valores con persistencia</h2>
+      <p class="mt-3 text-sm text-charcoal/70">Actualiza mensual, trimestral y semestral sin tocar el esquema operativo de reservas.</p>
+    </a>
+  </div>
+
+  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Seguimiento de profesoras</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Horas efectivas por mes</h2>
+      </div>
+      <p class="text-sm text-charcoal/70">El cálculo respeta el tope de 5 horas diarias y sólo suma bloques con asistencia.</p>
+    </div>
+    <div class="mt-6 grid gap-4 xl:grid-cols-2">
+      {% for summary in teacher_month_summaries %}
+        <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-medium text-charcoal">{{ summary.teacher.get_full_name|default:summary.teacher.email }}</p>
+              <p class="mt-1 text-xs text-charcoal/70">{{ summary.teacher.email }}</p>
+            </div>
+            <span class="rounded-full bg-olive px-3 py-1 text-[10px] font-medium uppercase tracking-luxe text-ivory">{{ summary.metrics.effective_hours_label }}</span>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+              <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Días asignados</p>
+              <p class="mt-2 text-lg font-medium text-charcoal">{{ summary.metrics.scheduled_shift_day_count }}</p>
+            </div>
+            <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+              <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Clases con alumnas</p>
+              <p class="mt-2 text-lg font-medium text-charcoal">{{ summary.metrics.classes_with_students_count }}</p>
+            </div>
+            <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+              <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Asistencias marcadas</p>
+              <p class="mt-2 text-lg font-medium text-charcoal">{{ summary.metrics.attendance_marked_count }}</p>
+            </div>
+            <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+              <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Alumnas únicas</p>
+              <p class="mt-2 text-lg font-medium text-charcoal">{{ summary.metrics.unique_students_count }}</p>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="rounded-[1.5rem] border border-dashed border-olive/12 bg-ivory/50 p-5 text-sm text-charcoal/70">Todavía no hay profesoras activas para mostrar.</p>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
     <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitudes de planes</p>
@@ -151,6 +230,47 @@
             {% endfor %}
           {% else %}
             <p class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">Aún no hay notas privadas registradas por profesoras.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Historial</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Aprobaciones y rechazos</h2>
+        <div class="mt-6 space-y-3 text-sm text-charcoal/70">
+          {% if plan_approval_history %}
+            {% for item in plan_approval_history %}
+              <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+                <p class="font-medium text-charcoal">{{ item.plan_request.user.get_full_name|default:item.plan_request.user.email }}</p>
+                <p class="mt-1 text-xs text-charcoal/70">{{ item.get_action_type_display }} · {{ item.plan_request.plan.nombre }} · {{ item.plan_request.get_periodo_display }}</p>
+                <p class="mt-1 text-xs text-charcoal/60">{{ item.created_at|date:"d/m/Y H:i" }}{% if item.actor %} · por {{ item.actor.get_full_name|default:item.actor.email }}{% endif %}</p>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">Aún no hay aprobaciones registradas.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Actividad reciente</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Bitácora de administración</h2>
+        <div class="mt-6 space-y-3 text-sm text-charcoal/70">
+          {% if recent_admin_actions %}
+            {% for action in recent_admin_actions %}
+              <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+                <p class="font-medium text-charcoal">{{ action.get_action_type_display }}</p>
+                <p class="mt-1 text-xs text-charcoal/70">
+                  {% if action.target_user %}{{ action.target_user.get_full_name|default:action.target_user.email }}{% elif action.plan_request %}{{ action.plan_request.plan.nombre }}{% elif action.class_session %}Clase {{ action.class_session.starts_at|date:"d/m/Y H:i" }}{% endif %}
+                </p>
+                <p class="mt-1 text-xs text-charcoal/60">{{ action.created_at|date:"d/m/Y H:i" }}{% if action.actor %} · por {{ action.actor.get_full_name|default:action.actor.email }}{% endif %}</p>
+                {% if action.details %}
+                  <p class="mt-2 text-xs text-charcoal/60">{{ action.details }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">Todavía no hay actividad administrativa registrada.</p>
           {% endif %}
         </div>
       </div>

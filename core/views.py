@@ -20,6 +20,8 @@ from .models import (
 	ClassAttendance,
 	ClassReservation,
 	ClassSession,
+	AdminActionLog,
+	AdminActionType,
 	PlanBillingPeriod,
 	PlanCatalog,
 	PlanRequest,
@@ -372,9 +374,7 @@ def _build_teacher_month_metrics(teacher, target_month=None):
 			if TeacherShiftKind.SATURDAY in selected_shift_kinds:
 				scheduled_shift_day_count += 1
 		else:
-			if TeacherShiftKind.AM in selected_shift_kinds:
-				scheduled_shift_day_count += 1
-			if TeacherShiftKind.PM in selected_shift_kinds:
+			if TeacherShiftKind.AM in selected_shift_kinds or TeacherShiftKind.PM in selected_shift_kinds:
 				scheduled_shift_day_count += 1
 		current_day += timedelta(days=1)
 
@@ -391,35 +391,7 @@ def _build_teacher_month_metrics(teacher, target_month=None):
 	capacity_maps = _get_capacity_maps(month_sessions)
 	student_reservations = capacity_maps["student_reservations"]
 
-	sessions_by_shift_day = defaultdict(list)
-	for session in month_sessions:
-		local_start = _get_session_local_datetime(session.starts_at)
-		shift_kind = _get_shift_kind_for_local_start(local_start)
-		if shift_kind is None:
-			continue
-		sessions_by_shift_day[(local_start.date(), shift_kind)].append(session)
-
-	total_effective_minutes = 0
-	last_block_skipped_count = 0
-	for _, sessions_in_shift in sessions_by_shift_day.items():
-		if not sessions_in_shift:
-			continue
-		total_minutes = 0
-		last_session = None
-		last_session_start = None
-		for session in sessions_in_shift:
-			local_start = _get_session_local_datetime(session.starts_at)
-			local_end = _get_session_local_datetime(session.ends_at)
-			total_minutes += _get_counted_session_minutes(local_start, local_end)
-			if last_session_start is None or local_start > last_session_start:
-				last_session = session
-				last_session_start = local_start
-		if last_session is not None and capacity_maps["total_by_session"][last_session.id] <= 0:
-			local_start = _get_session_local_datetime(last_session.starts_at)
-			local_end = _get_session_local_datetime(last_session.ends_at)
-			total_minutes -= _get_counted_session_minutes(local_start, local_end)
-			last_block_skipped_count += 1
-		total_effective_minutes += max(total_minutes, 0)
+	total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions)
 
 	adjustment_minutes = int(
 		TeacherHoursAdjustment.objects.filter(
@@ -434,6 +406,7 @@ def _build_teacher_month_metrics(teacher, target_month=None):
 	attendance_marked_count = ClassAttendance.objects.filter(
 		teacher=teacher,
 		class_session__in=month_sessions,
+		present=True,
 	).count()
 	unique_student_ids = {reservation.user_id for reservation in student_reservations}
 	return {
@@ -665,6 +638,8 @@ def _get_booking_close_delta(class_session):
 def _booking_window_allows_session(class_session, now=None):
 	now = now or timezone.now()
 	starts_at = _get_session_local_datetime(class_session.starts_at)
+	if getattr(class_session, "is_blocked", False):
+		return False, class_session.blocked_reason or "Este bloque fue bloqueado por administración."
 	holiday_name = holidays_cl.get_holiday_name(starts_at.date())
 	if holiday_name:
 		return False, f"No hay clases disponibles por feriado: {holiday_name}."
@@ -825,6 +800,40 @@ def _build_plan_request_kind(user, plan):
 	if active_plan_request.plan_id == plan.id:
 		return "renewal"
 	return "plan_change"
+
+
+def _log_admin_action(actor, action_type, *, details=None, target_user=None, plan_request=None, class_session=None):
+	AdminActionLog.objects.create(
+		actor=actor,
+		action_type=action_type,
+		target_user=target_user,
+		plan_request=plan_request,
+		class_session=class_session,
+		details=details,
+	)
+
+
+def _count_teacher_effective_minutes(month_sessions):
+	present_session_ids = set(
+		ClassAttendance.objects.filter(class_session__in=month_sessions, present=True).values_list(
+			"class_session_id",
+			flat=True,
+		)
+	)
+	sessions_by_day = defaultdict(list)
+	for session in month_sessions:
+		sessions_by_day[_get_session_local_datetime(session.starts_at).date()].append(session)
+
+	total_minutes = 0
+	skipped_last_block_count = 0
+	for day_sessions in sessions_by_day.values():
+		day_sessions.sort(key=lambda session: _get_session_local_datetime(session.starts_at))
+		counted_sessions = day_sessions[:5]
+		if counted_sessions and counted_sessions[-1].id not in present_session_ids:
+			skipped_last_block_count += 1
+		total_minutes += sum(60 for session in counted_sessions if session.id in present_session_ids)
+
+	return total_minutes, skipped_last_block_count
 
 
 def _build_schedule_context(user, active_plan_request):
@@ -1406,7 +1415,38 @@ def teacher_dashboard(request):
 	)
 	return render(request, "core/dashboards/teacher.html", context)
 
-
+def _build_admin_overview_context():
+	today = timezone.localdate()
+	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	sessions = list(ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"))
+	capacity_maps = _get_capacity_maps(sessions)
+	total_capacity = sum(session.capacidad_maxima for session in sessions)
+	total_occupied = sum(capacity_maps["total_by_session"][session.id] for session in sessions)
+	present_attendance_count = ClassAttendance.objects.filter(class_session__in=sessions, present=True).count()
+	teachers = list(User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email"))
+	teacher_month_summaries = [
+		{
+			"teacher": teacher,
+			"metrics": _build_teacher_month_metrics(teacher, target_month=today),
+		}
+		for teacher in teachers
+	]
+	return {
+		"dashboard_session_count": len(sessions),
+		"dashboard_total_capacity": total_capacity,
+		"dashboard_total_occupied": total_occupied,
+		"dashboard_occupancy_rate": (total_occupied / total_capacity) if total_capacity else 0,
+		"dashboard_occupancy_percent": round((total_occupied / total_capacity) * 100) if total_capacity else 0,
+		"dashboard_attendance_rate": (present_attendance_count / total_occupied) if total_occupied else 0,
+		"dashboard_attendance_percent": round((present_attendance_count / total_occupied) * 100) if total_occupied else 0,
+		"dashboard_present_attendance_count": present_attendance_count,
+		"dashboard_blocked_session_count": sum(1 for session in sessions if session.is_blocked),
+		"dashboard_teacher_summary_count": len(teacher_month_summaries),
+		"teacher_month_summaries": teacher_month_summaries,
+	}
+@login_required
 @admin_required
 def admin_dashboard(request):
 	if request.method == "POST":
@@ -1424,11 +1464,26 @@ def admin_dashboard(request):
 					plan_request = PlanRequest.objects.select_for_update().get(pk=plan_request_id)
 					if action == "confirm_plan":
 						plan_request.estado = PlanRequestStatus.CONFIRMED
+						plan_request.save(update_fields=["estado", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.PLAN_CONFIRMED,
+							target_user=plan_request.user,
+							plan_request=plan_request,
+							details=f"{plan_request.plan.nombre} · {plan_request.get_periodo_display()}",
+						)
 						messages.success(request, "La solicitud fue confirmada y el plan quedó vigente.")
 					else:
 						plan_request.estado = PlanRequestStatus.REJECTED
+						plan_request.save(update_fields=["estado", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.PLAN_REJECTED,
+							target_user=plan_request.user,
+							plan_request=plan_request,
+							details=f"{plan_request.plan.nombre} · {plan_request.get_periodo_display()}",
+						)
 						messages.success(request, "La solicitud fue rechazada.")
-					plan_request.save(update_fields=["estado"])
 			except PlanRequest.DoesNotExist:
 				messages.error(request, "No encontramos la solicitud seleccionada.")
 			return redirect("core:admin_dashboard")
@@ -1451,11 +1506,18 @@ def admin_dashboard(request):
 			if active_plan is None:
 				messages.error(request, "La alumna no tiene un plan vigente confirmado.")
 				return redirect("core:admin_dashboard")
-			ClassCreditAdjustment.objects.create(
+			adjustment = ClassCreditAdjustment.objects.create(
 				user=student,
 				plan_request=active_plan,
 				cantidad=cantidad,
 				motivo=motivo,
+			)
+			_log_admin_action(
+				request.user,
+				AdminActionType.BONUS_CLASSES_ADDED,
+				target_user=student,
+				plan_request=active_plan,
+				details=f"+{adjustment.cantidad} clases",
 			)
 			messages.success(request, "Se agregaron clases adicionales a la cuenta de la alumna.")
 			return redirect("core:admin_dashboard")
@@ -1480,12 +1542,18 @@ def admin_dashboard(request):
 			if teacher is None:
 				messages.error(request, "No encontramos una profesora con ese correo.")
 				return redirect("core:admin_dashboard")
-			TeacherHoursAdjustment.objects.create(
+			adjustment = TeacherHoursAdjustment.objects.create(
 				teacher=teacher,
 				year=month_date.year,
 				month=month_date.month,
 				minutes_delta=hours_delta * 60,
 				reason=reason,
+			)
+			_log_admin_action(
+				request.user,
+				AdminActionType.TEACHER_HOURS_ADJUSTED,
+				target_user=teacher,
+				details=f"{adjustment.year}-{adjustment.month:02d}: {adjustment.minutes_delta} min",
 			)
 			messages.success(request, "El ajuste de horas fue registrado.")
 			return redirect("core:admin_dashboard")
@@ -1511,14 +1579,221 @@ def admin_dashboard(request):
 	recent_teacher_hour_adjustments = list(
 		TeacherHoursAdjustment.objects.select_related("teacher").order_by("-created_at")[:20]
 	)
+	recent_admin_actions = list(
+		AdminActionLog.objects.select_related("actor", "target_user", "plan_request", "class_session")
+		.order_by("-created_at")[:20]
+	)
+	plan_approval_history = list(
+		AdminActionLog.objects.filter(
+			action_type__in=(AdminActionType.PLAN_CONFIRMED, AdminActionType.PLAN_REJECTED)
+		)
+		.select_related("actor", "target_user", "plan_request")
+		.order_by("-created_at")[:12]
+	)
+	context = {
+		"pending_plan_requests": pending_plan_requests,
+		"recent_confirmed_plans": recent_confirmed_plans,
+		"recent_adjustments": recent_adjustments,
+		"recent_teacher_notes": recent_teacher_notes,
+		"recent_teacher_hour_adjustments": recent_teacher_hour_adjustments,
+		"recent_admin_actions": recent_admin_actions,
+		"plan_approval_history": plan_approval_history,
+	}
+	context.update(_build_admin_overview_context())
+	return render(request, "core/dashboards/admin.html", context)
+
+
+@login_required
+@admin_required
+def admin_schedule_view(request):
+	today = timezone.localdate()
+	_ensure_schedule_sessions(today, DISPLAY_SCHEDULE_DAYS)
+	window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(today + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+
+	if request.method == "POST":
+		action = request.POST.get("action")
+		if action == "admin_book_user":
+			email = (request.POST.get("user_email") or "").strip().lower()
+			nota = (request.POST.get("nota") or "").strip() or None
+			try:
+				session_id = int(request.POST.get("session_id") or "")
+			except (TypeError, ValueError):
+				session_id = None
+			if not email or session_id is None:
+				messages.error(request, "Ingresa un correo y una clase válidos.")
+				return redirect("core:admin_schedule")
+			student = User.objects.filter(email__iexact=email).first()
+			if student is None:
+				messages.error(request, "No encontramos una usuaria con ese correo.")
+				return redirect("core:admin_schedule")
+			try:
+				with transaction.atomic():
+					class_session = ClassSession.objects.select_for_update().get(pk=session_id)
+					if class_session.is_blocked:
+						messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
+						return redirect("core:admin_schedule")
+					if ClassReservation.objects.filter(class_session=class_session, user=student).exists():
+						messages.info(request, "La usuaria ya está agendada en esta clase.")
+						return redirect("core:admin_schedule")
+					current_occupancy = ClassReservation.objects.filter(class_session=class_session).count() + SingleClassBooking.objects.filter(
+						class_session=class_session,
+						estado__in=ACTIVE_SINGLE_CLASS_STATUSES,
+					).count()
+					if current_occupancy >= class_session.capacidad_maxima:
+						messages.error(request, "Este bloque ya completó sus cupos.")
+						return redirect("core:admin_schedule")
+					reservation = ClassReservation.objects.create(class_session=class_session, user=student, nota=nota)
+					_log_admin_action(
+						request.user,
+						AdminActionType.CLASS_BOOKED,
+						target_user=student,
+						class_session=class_session,
+						details=nota or f"Reserva manual #{reservation.id}",
+					)
+					messages.success(request, "La usuaria quedó agendada en la clase.")
+			except ClassSession.DoesNotExist:
+				messages.error(request, "No encontramos la clase seleccionada.")
+			return redirect("core:admin_schedule")
+
+		if action in {"block_class", "unblock_class"}:
+			try:
+				session_id = int(request.POST.get("session_id") or "")
+			except (TypeError, ValueError):
+				session_id = None
+			blocked_reason = (request.POST.get("blocked_reason") or "").strip() or None
+			if session_id is None:
+				messages.error(request, "No encontramos la clase seleccionada.")
+				return redirect("core:admin_schedule")
+			try:
+				with transaction.atomic():
+					class_session = ClassSession.objects.select_for_update().get(pk=session_id)
+					if action == "block_class":
+						class_session.is_blocked = True
+						class_session.blocked_reason = blocked_reason or "Bloqueado por administración."
+						class_session.save(update_fields=["is_blocked", "blocked_reason", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.CLASS_BLOCKED,
+							class_session=class_session,
+							details=class_session.blocked_reason,
+						)
+						messages.success(request, "La clase fue bloqueada.")
+					else:
+						class_session.is_blocked = False
+						class_session.blocked_reason = None
+						class_session.save(update_fields=["is_blocked", "blocked_reason", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.CLASS_UNBLOCKED,
+							class_session=class_session,
+							details="Bloque liberado por administración.",
+						)
+						messages.success(request, "La clase fue desbloqueada.")
+			except ClassSession.DoesNotExist:
+				messages.error(request, "No encontramos la clase seleccionada.")
+			return redirect("core:admin_schedule")
+
+	sessions = list(ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"))
+	capacity_maps = _get_capacity_maps(sessions)
+	attendance_records = list(
+		ClassAttendance.objects.filter(class_session__in=sessions, present=True).select_related("user", "teacher", "class_session")
+	)
+	attendance_by_session = defaultdict(list)
+	for record in attendance_records:
+		attendance_by_session[record.class_session_id].append(record)
+
+	schedule_days = []
+	for session in sessions:
+		local_start = _get_session_local_datetime(session.starts_at)
+		local_end = _get_session_local_datetime(session.ends_at)
+		if not _is_valid_schedule_slot(local_start, local_end):
+			continue
+		day_key = local_start.date()
+		if not schedule_days or schedule_days[-1]["date"] != day_key:
+			schedule_days.append(
+				{
+					"date": day_key,
+					"weekday": local_start.strftime("%A").capitalize(),
+					"slots": [],
+				}
+			)
+		student_reservations = capacity_maps["student_by_session"][session.id]
+		present_records = attendance_by_session[session.id]
+		reservation_count = capacity_maps["total_by_session"][session.id]
+		total_capacity = session.capacidad_maxima or 0
+		schedule_days[-1]["slots"].append(
+			{
+				"session": session,
+				"starts_at_local": local_start,
+				"ends_at_local": local_end,
+				"date_label": local_start.strftime("%A %d/%m/%Y").capitalize(),
+				"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
+				"reservation_count": reservation_count,
+				"attendance_count": len(present_records),
+				"attendance_rate": (len(present_records) / reservation_count) if reservation_count else 0,
+				"capacity_left": max(total_capacity - reservation_count, 0),
+				"student_names": [reservation.user.get_full_name() or reservation.user.email for reservation in student_reservations],
+				"present_names": [record.user.get_full_name() or record.user.email for record in present_records],
+				"teacher_label": _get_teacher_display_for_session(session),
+				"is_blocked": session.is_blocked,
+				"blocked_reason": session.blocked_reason or "",
+				"time_key": local_start.strftime("%H:%M"),
+			}
+		)
+
+	calendar_weeks = _build_calendar_weeks(schedule_days)
 	return render(
 		request,
-		"core/dashboards/admin.html",
+		"core/dashboards/admin_schedule.html",
 		{
-			"pending_plan_requests": pending_plan_requests,
-			"recent_confirmed_plans": recent_confirmed_plans,
-			"recent_adjustments": recent_adjustments,
-			"recent_teacher_notes": recent_teacher_notes,
-			"recent_teacher_hour_adjustments": recent_teacher_hour_adjustments,
+			"calendar_weeks": calendar_weeks,
+			"default_calendar_week_index": _get_default_calendar_week_index(calendar_weeks),
+			"schedule_days": schedule_days,
+			"blocked_sessions_count": sum(1 for session in sessions if session.is_blocked),
+			"total_sessions_count": len(sessions),
+		},
+	)
+
+
+@login_required
+@admin_required
+def admin_plan_pricing_view(request):
+	if request.method == "POST" and request.POST.get("action") == "update_plan_prices":
+		try:
+			plan_id = int(request.POST.get("plan_id") or "")
+		except (TypeError, ValueError):
+			plan_id = None
+		if plan_id is None:
+			messages.error(request, "No encontramos el plan seleccionado.")
+			return redirect("core:admin_plan_pricing")
+		try:
+			with transaction.atomic():
+				plan = PlanCatalog.objects.select_for_update().get(pk=plan_id)
+				plan.precio_mensual = int(request.POST.get("precio_mensual") or plan.precio_mensual)
+				plan.precio_trimestral = int(request.POST.get("precio_trimestral") or plan.precio_trimestral)
+				plan.precio_semestral = int(request.POST.get("precio_semestral") or plan.precio_semestral)
+				plan.save(update_fields=["precio_mensual", "precio_trimestral", "precio_semestral", "updated_at"])
+				_log_admin_action(
+					request.user,
+					AdminActionType.PLAN_PRICE_UPDATED,
+					details=f"{plan.nombre}: {plan.precio_mensual} / {plan.precio_trimestral} / {plan.precio_semestral}",
+				)
+				messages.success(request, f"Los precios de {plan.nombre} fueron actualizados.")
+		except (PlanCatalog.DoesNotExist, ValueError):
+			messages.error(request, "No pudimos guardar los precios del plan.")
+		return redirect("core:admin_plan_pricing")
+
+	plans = list(PlanCatalog.objects.order_by("orden", "id"))
+	return render(
+		request,
+		"core/dashboards/admin_plans.html",
+		{
+			"plans": plans,
+			"recent_price_updates": list(
+				AdminActionLog.objects.filter(action_type=AdminActionType.PLAN_PRICE_UPDATED)
+				.select_related("actor")
+				.order_by("-created_at")[:12]
+			),
 		},
 	)

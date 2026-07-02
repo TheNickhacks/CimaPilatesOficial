@@ -107,6 +107,8 @@ class ClassSession(models.Model):
 	starts_at = models.DateTimeField(unique=True)
 	ends_at = models.DateTimeField()
 	capacidad_maxima = models.PositiveIntegerField(default=4)
+	is_blocked = models.BooleanField(default=False)
+	blocked_reason = models.TextField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -349,3 +351,61 @@ class TeacherSessionNote(models.Model):
 
 	def __str__(self) -> str:
 		return f"{self.teacher_id} - {self.class_session_id}"
+
+
+class AdminActionType(models.TextChoices):
+	PLAN_CONFIRMED = "plan_confirmado", "Plan confirmado"
+	PLAN_REJECTED = "plan_rechazado", "Plan rechazado"
+	PLAN_PRICE_UPDATED = "precio_plan_actualizado", "Precio de plan actualizado"
+	CLASS_BOOKED = "clase_agendada", "Clase agendada"
+	CLASS_BLOCKED = "clase_bloqueada", "Clase bloqueada"
+	CLASS_UNBLOCKED = "clase_desbloqueada", "Clase desbloqueada"
+	TEACHER_HOURS_ADJUSTED = "horas_profesora_ajustadas", "Horas de profesora ajustadas"
+	BONUS_CLASSES_ADDED = "clases_extra_agregadas", "Clases extra agregadas"
+
+
+class AdminActionLog(models.Model):
+	id = models.BigAutoField(primary_key=True)
+	actor = models.ForeignKey(
+		"accounts.User",
+		on_delete=models.SET_NULL,
+		db_column="actor_id",
+		related_name="admin_actions",
+		null=True,
+		blank=True,
+	)
+	action_type = models.CharField(max_length=50, choices=AdminActionType.choices)
+	target_user = models.ForeignKey(
+		"accounts.User",
+		on_delete=models.SET_NULL,
+		db_column="target_user_id",
+		related_name="targeted_admin_actions",
+		null=True,
+		blank=True,
+	)
+	plan_request = models.ForeignKey(
+		PlanRequest,
+		on_delete=models.SET_NULL,
+		db_column="plan_request_id",
+		related_name="admin_action_logs",
+		null=True,
+		blank=True,
+	)
+	class_session = models.ForeignKey(
+		ClassSession,
+		on_delete=models.SET_NULL,
+		db_column="class_session_id",
+		related_name="admin_action_logs",
+		null=True,
+		blank=True,
+	)
+	details = models.TextField(null=True, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		managed = False
+		db_table = "registro_admin_acciones"
+		ordering = ("-created_at",)
+
+	def __str__(self) -> str:
+		return f"{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}"

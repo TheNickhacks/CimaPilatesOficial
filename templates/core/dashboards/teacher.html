@@ -31,7 +31,7 @@
     <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Horas efectivas</p>
       <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.effective_hours_label }}</p>
-      <p class="mt-2 text-sm text-charcoal/70">Acumuladas al {{ teacher_month_metrics.effective_cutoff_label }}. Se cuentan todas las horas del turno, excepto el último bloque si queda sin personas agendadas.</p>
+      <p class="mt-2 text-sm text-charcoal/70">Acumuladas al {{ teacher_month_metrics.effective_cutoff_label }}. Se cuentan sólo los bloques con asistencia, con tope de 5 horas por día y sin sumar el último bloque si nadie llega.</p>
       {% if teacher_month_metrics.adjustment_minutes %}
         <p class="mt-2 text-xs text-charcoal/60">Ajuste administración: {% if teacher_month_metrics.adjustment_minutes > 0 %}+{% else %}-{% endif %}{{ teacher_month_metrics.adjustment_label }}</p>
       {% endif %}
