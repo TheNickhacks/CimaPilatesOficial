@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% block title %}Panel Alumna | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8"
+         x-data="{ openPlanModal: {{ open_plan_modal|yesno:'true,false' }}, selectedPlan: '{{ selected_plan.slug|default:'' }}', selectedPeriod: '{{ selected_period }}' }">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="flex items-center gap-4">
+        {% if profile_photo_url %}
+          <img src="{{ profile_photo_url }}" alt="Foto de perfil de {{ request.user.get_full_name|default:request.user.email }}" class="h-20 w-20 rounded-full border border-ivory/20 object-cover shadow-sm" />
+        {% else %}
+          <div class="flex h-20 w-20 items-center justify-center rounded-full border border-ivory/20 bg-ivory/10 font-serif text-2xl text-ivory">
+            {{ request.user.profile_initials }}
+          </div>
+        {% endif %}
+        <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Panel de alumna</p>
+        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Hola, {{ request.user.get_full_name|default:request.user.email }}</h1>
+        <p class="mt-3 max-w-2xl leading-relaxed text-ivory/80">Desde aqui gestionas tu plan, revisas su vigencia y actualizas tus datos personales cuando lo necesites.</p>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <a href="{% url 'core:student_schedule' %}" class="rounded-full bg-ivory px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-butter">Ver agenda</a>
+        <a href="{% url 'accounts:profile' %}" class="rounded-full border border-ivory/30 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">Editar perfil</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-4 md:grid-cols-4">
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Fidelización</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ request.user.loyalty_badge }}</p>
+      <p class="mt-2 text-sm leading-relaxed text-charcoal/70">{{ request.user.consecutive_active_plan_months }} meses consecutivos con plan activo.</p>
+    </div>
+    <a href="{% url 'core:student_schedule' %}" class="group rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda</p>
+      <p class="mt-3 font-serif text-2xl text-charcoal">Reservar clases</p>
+      <p class="mt-2 text-sm leading-relaxed text-charcoal/70">Consulta bloques disponibles, cupos y tus clases de la semana.</p>
+    </a>
+    <a href="{% url 'accounts:profile' %}" class="group rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Perfil</p>
+      <p class="mt-3 font-serif text-2xl text-charcoal">Actualizar mis datos</p>
+      <p class="mt-2 text-sm leading-relaxed text-charcoal/70">Edita tus datos personales, preferencias y seguridad de la cuenta.</p>
+    </a>
+    <a href="#solicitud-plan" class="group rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Mi plan</p>
+      <p class="mt-3 font-serif text-2xl text-charcoal">Historial y vigencia</p>
+      <p class="mt-2 text-sm leading-relaxed text-charcoal/70">Revisa tu plan actual, sus fechas y gestiona renovaciones o mejoras.</p>
+    </a>
+  </div>
+
+  <div class="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+    <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Informacion para tus clases</p>
+          <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Datos registrados para tu practica</h2>
+        </div>
+        <a href="{% url 'accounts:profile' %}" class="rounded-full border border-olive/20 px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-olive/5">Actualizar informacion</a>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-[1.5rem] border border-olive/10 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Informacion de salud relevante</p>
+          <p class="mt-3 text-sm leading-relaxed text-charcoal/70">{{ request.user.informacion_salud|default:"Aun no registras informacion en este apartado." }}</p>
+        </div>
+        <div class="rounded-[1.5rem] border border-olive/10 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Consideraciones para tus clases</p>
+          <p class="mt-3 text-sm leading-relaxed text-charcoal/70">{{ request.user.consideraciones_clase|default:"Aun no registras consideraciones adicionales." }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda semanal</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Control de clases</h2>
+      <div class="mt-6 space-y-4 text-sm text-charcoal/70">
+        <div class="rounded-[1.5rem] border border-olive/10 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases disponibles</p>
+          <p class="mt-2 font-serif text-3xl text-olive">{{ plan_remaining_count }}</p>
+          <p class="mt-1">Corresponde al total del plan vigente (incluye ajustes si existen).</p>
+        </div>
+        <p>La reserva se habilita exactamente con 1 semana de anticipacion y cada bloque admite un maximo de 4 alumnas.</p>
+        <a href="{% url 'core:student_schedule' %}" class="btn-primary block text-center">Ir a la agenda</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="solicitud-plan" class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8 md:p-10">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Contratación de plan</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Confirma tu plan y envia tu solicitud de pago</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-charcoal/70">Selecciona el plan que quieres contratar o gestionar. Podras revisar tu plan vigente, renovarlo, mejorarlo y adjuntar tu comprobante para agilizar la validacion.</p>
+      </div>
+      <a href="{% url 'core:home' %}#planes" class="rounded-full border border-olive/20 px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-olive/5">Ver planes del sitio</a>
+    </div>
+
+    {% if current_plan_request %}
+      <div class="mt-8 rounded-[1.75rem] border border-olive/12 bg-olive/5 p-6 md:p-7">
+        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Plan vigente</p>
+            <h3 class="mt-3 font-serif text-3xl text-charcoal">{{ current_plan_request.plan.nombre }}</h3>
+            <p class="mt-2 text-sm text-charcoal/70">{{ current_plan_request.plan.frecuencia }} · {{ current_plan_request.get_periodo_display }} · Estado {{ current_plan_request.get_estado_display|lower }}</p>
+          </div>
+          <div class="rounded-[1.5rem] bg-card px-5 py-4 text-sm text-charcoal/75">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vigencia</p>
+            <p class="mt-2 font-serif text-2xl text-olive">{{ current_plan_remaining_label }}</p>
+            <p class="mt-1">Vence el {{ current_plan_valid_until|date:"d/m/Y H:i" }}</p>
+          </div>
+        </div>
+        <div class="mt-6 grid gap-4 md:grid-cols-3">
+          <div class="rounded-2xl border border-olive/10 bg-card px-5 py-4">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Plan activo</p>
+            <p class="mt-2 text-lg font-medium text-charcoal">{{ current_plan_request.plan.nombre }}</p>
+          </div>
+          <div class="rounded-2xl border border-olive/10 bg-card px-5 py-4">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud</p>
+            <p class="mt-2 text-lg font-medium text-charcoal">{{ current_plan_request.created_at|date:"d/m/Y H:i" }}</p>
+          </div>
+          <div class="rounded-2xl border border-olive/10 bg-card px-5 py-4">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Periodo</p>
+            <p class="mt-2 text-lg font-medium text-charcoal">{{ current_plan_request.get_periodo_display }}</p>
+          </div>
+        </div>
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button type="button"
+                  @click="selectedPlan='{{ current_plan_request.plan.slug }}'; selectedPeriod='{{ current_plan_request.periodo }}'; openPlanModal=true"
+                  class="rounded-full bg-olive px-5 py-3 text-sm font-medium text-ivory transition-colors hover:bg-olive-gold">
+            Renovar plan
+          </button>
+          {% if upgrade_plan %}
+            <button type="button"
+                    @click="selectedPlan='{{ upgrade_plan.slug }}'; selectedPeriod='{{ current_plan_request.periodo }}'; openPlanModal=true"
+                    class="rounded-full border border-olive/20 px-5 py-3 text-sm font-medium text-olive transition-colors hover:bg-olive/5">
+              Mejorar plan
+            </button>
+          {% endif %}
+          {% if current_plan_expired %}
+            <p class="self-center text-sm text-charcoal/65">Tu vigencia ya finalizo, puedes renovar en cualquier momento.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="mt-8 rounded-[1.75rem] border border-dashed border-olive/15 bg-ivory/70 p-6">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Plan vigente</p>
+        <h3 class="mt-3 font-serif text-2xl text-charcoal">Aun no tienes un plan solicitado</h3>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-charcoal/70">Cuando solicites tu primer plan, aqui veras su estado, la vigencia estimada y accesos directos para renovarlo o mejorar a una categoria superior.</p>
+      </div>
+    {% endif %}
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {% for plan in plans %}
+        <article class="flex flex-col rounded-[1.75rem] border border-olive/12 bg-ivory/70 p-6 transition-transform hover:-translate-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-serif text-4xl font-light text-olive">{{ plan.icono }}</span>
+            {% if plan.destacado %}
+              <span class="rounded-full bg-butter px-3 py-1 text-xs font-medium text-charcoal">Popular</span>
+            {% endif %}
+          </div>
+          <h3 class="mt-4 font-serif text-xl text-charcoal">{{ plan.nombre }}</h3>
+          <p class="mt-1 text-sm text-charcoal/65">{{ plan.frecuencia }}</p>
+          <div class="mt-5 space-y-1 text-sm text-charcoal/75">
+            <p>Mensual: ${{ plan.precio_mensual }}</p>
+            <p>Trimestral: ${{ plan.precio_trimestral }}</p>
+            <p>Semestral: ${{ plan.precio_semestral }}</p>
+          </div>
+          <button type="button"
+                  @click="selectedPlan='{{ plan.slug }}'; selectedPeriod='monthly'; openPlanModal=true"
+                  class="mt-6 rounded-full bg-olive px-5 py-3 text-sm font-medium text-ivory transition-colors hover:bg-olive-gold">
+            {% if current_plan_request and current_plan_request.plan.slug == plan.slug %}
+              Renovar este plan
+            {% else %}
+              Confirmar este plan
+            {% endif %}
+          </button>
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if plan_requests %}
+      <div class="mt-8 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-6">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitudes recientes</p>
+        <div class="mt-4 space-y-3">
+          {% for item in plan_requests %}
+            <div class="rounded-2xl border border-olive/10 bg-card px-4 py-4">
+              <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                <p class="font-medium text-charcoal">{{ item.plan.nombre }} · {{ item.get_periodo_display }}</p>
+                <span class="text-xs font-medium uppercase tracking-luxe text-olive">{{ item.get_estado_display }}</span>
+              </div>
+              <p class="mt-1 text-sm text-charcoal/65">Solicitud enviada el {{ item.created_at|date:"d/m/Y H:i" }} · Método: {{ item.get_metodo_pago_display }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div x-show="openPlanModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/55 px-5 py-10">
+    <div @click.away="openPlanModal=false" class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-card p-8 shadow-2xl md:p-10">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Confirmación de plan</p>
+          <h3 class="mt-3 font-serif text-3xl font-light text-charcoal">Finaliza tu solicitud</h3>
+        </div>
+        <button type="button" @click="openPlanModal=false" class="rounded-full border border-olive/20 px-4 py-2 text-sm text-olive">Cerrar</button>
+      </div>
+
+      <div class="mt-6 rounded-[1.5rem] border border-olive/12 bg-ivory p-6">
+        <p class="font-medium text-charcoal">Favor dirigirte al centro de pilates para hacer el pago correspondiente por tarjeta o efectivo, o dejar los datos de transferencia.</p>
+        <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Se te enviará un correo cuando el pago haya sido confirmado. Si ya realizaste una transferencia, puedes subir el comprobante para entregar mayor información y acelerar la validación.</p>
+      </div>
+
+      <div class="mt-5 rounded-[1.5rem] border border-olive/12 bg-olive/5 p-6">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos para transferencia</p>
+        <div class="mt-4 grid gap-3 md:grid-cols-2">
+          {% for label, value in transfer_details %}
+            <div class="rounded-2xl bg-card px-4 py-4">
+              <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">{{ label }}</p>
+              <p class="mt-2 text-sm font-medium text-charcoal">{{ value }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mt-5 space-y-3">
+        {% for plan in plans %}
+          <div x-show="selectedPlan === '{{ plan.slug }}'" x-cloak class="rounded-[1.5rem] border border-olive/12 bg-olive/5 p-5">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Plan seleccionado</p>
+            <h4 class="mt-2 font-serif text-2xl text-charcoal">{{ plan.nombre }}</h4>
+            <p class="mt-2 text-sm text-charcoal/70">{{ plan.frecuencia }}</p>
+            <div class="mt-4 grid gap-3 md:grid-cols-3">
+              <div class="rounded-2xl bg-card px-4 py-3 text-sm text-charcoal/75">Mensual: ${{ plan.precio_mensual }}</div>
+              <div class="rounded-2xl bg-card px-4 py-3 text-sm text-charcoal/75">Trimestral: ${{ plan.precio_trimestral }}</div>
+              <div class="rounded-2xl bg-card px-4 py-3 text-sm text-charcoal/75">Semestral: ${{ plan.precio_semestral }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if plan_request_form.non_field_errors %}
+        <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {% for error in plan_request_form.non_field_errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="mt-6 grid gap-5">
+        {% csrf_token %}
+        <input type="hidden" name="plan_slug" :value="selectedPlan">
+
+        <div>
+          <label for="{{ plan_request_form.periodo.id_for_label }}" class="text-sm font-medium text-charcoal">{{ plan_request_form.periodo.label }}</label>
+          <select id="{{ plan_request_form.periodo.id_for_label }}" name="periodo" x-model="selectedPeriod" class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10">
+            {% for value, label in plan_request_form.fields.periodo.choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% for error in plan_request_form.periodo.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div>
+          <label for="{{ plan_request_form.metodo_pago.id_for_label }}" class="text-sm font-medium text-charcoal">{{ plan_request_form.metodo_pago.label }}</label>
+          {{ plan_request_form.metodo_pago }}
+          {% for error in plan_request_form.metodo_pago.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div>
+          <label for="{{ plan_request_form.notas.id_for_label }}" class="text-sm font-medium text-charcoal">{{ plan_request_form.notas.label }}</label>
+          {{ plan_request_form.notas }}
+          <p class="mt-2 text-xs text-charcoal/55">Si quieres, puedes indicar fecha de pago, monto transferido o cualquier referencia complementaria.</p>
+          {% for error in plan_request_form.notas.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div>
+          <label for="{{ plan_request_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ plan_request_form.comprobante.label }}</label>
+          {{ plan_request_form.comprobante }}
+          {% for error in plan_request_form.comprobante.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        {% for error in plan_request_form.plan_slug.errors %}
+          <p class="text-xs text-red-600">{{ error }}</p>
+        {% endfor %}
+
+        <button type="submit" class="btn-primary w-full">Enviar solicitud de plan</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

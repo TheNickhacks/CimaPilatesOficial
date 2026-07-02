@@ -1,0 +1,10 @@
+Hola {{ full_name }},
+
+Recibimos tu solicitud de renovacion para {{ plan_name }} en modalidad {{ period_label }}.
+
+Te avisaremos por correo cuando el pago haya sido validado.
+
+Si necesitas apoyo, puedes escribir a {{ reply_to_email }}.
+
+Cima Pilates
+{{ site_url }}

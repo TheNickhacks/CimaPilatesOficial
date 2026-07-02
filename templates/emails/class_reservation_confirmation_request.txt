@@ -1,0 +1,12 @@
+Hola {{ full_name }},
+
+Necesitamos tu confirmación para la clase del {{ class_datetime_label }}.
+
+Confirma tu asistencia aquí:
+{{ confirm_url }}
+
+Si no puedes asistir, por favor elimina la reserva desde tu agenda para liberar cupos.
+
+Equipo Cima Pilates
+{{ site_url }}
+

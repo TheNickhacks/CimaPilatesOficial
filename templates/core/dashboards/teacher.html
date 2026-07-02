@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% block title %}Panel Profesor | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8" x-data="{ activeWeek: {{ default_calendar_week_index|default:0 }} }">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div class="flex items-center gap-4">
+        {% if profile_photo_url %}
+          <img src="{{ profile_photo_url }}" alt="Foto de perfil de {{ request.user.get_full_name|default:request.user.email }}" class="h-20 w-20 rounded-full border border-ivory/20 object-cover shadow-sm" />
+        {% else %}
+          <div class="flex h-20 w-20 items-center justify-center rounded-full border border-ivory/20 bg-ivory/10 font-serif text-2xl text-ivory">
+            {{ request.user.profile_initials }}
+          </div>
+        {% endif %}
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Panel de profesor</p>
+          <h1 class="mt-3 font-serif text-4xl font-light leading-tight">Agenda, asistencia y seguimiento</h1>
+          <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">Registra tus turnos, abre cada clase desde la agenda, revisa los perfiles de tus alumnas y marca asistencia en un solo lugar.</p>
+        </div>
+      </div>
+      <a href="{% url 'accounts:profile' %}" class="rounded-full border border-ivory/30 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">Mi perfil</a>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Turnos del mes</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.scheduled_shift_day_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">{{ teacher_month_metrics.month_label }}</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Horas efectivas</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.effective_hours_label }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Acumuladas al {{ teacher_month_metrics.effective_cutoff_label }}. Se cuentan todas las horas del turno, excepto el último bloque si queda sin personas agendadas.</p>
+      {% if teacher_month_metrics.adjustment_minutes %}
+        <p class="mt-2 text-xs text-charcoal/60">Ajuste administración: {% if teacher_month_metrics.adjustment_minutes > 0 %}+{% else %}-{% endif %}{{ teacher_month_metrics.adjustment_label }}</p>
+      {% endif %}
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases con alumnas</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.classes_with_students_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Bloques del mes con al menos una persona agendada.</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Asistencias marcadas</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.attendance_marked_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Registros de presencia ingresados por ti durante el mes.</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Alumnas únicas</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ teacher_month_metrics.unique_students_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Cantidad de alumnas distintas atendidas en el período.</p>
+    </div>
+  </div>
+
+  <div class="mt-8 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+    <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Disponibilidad</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Turno mensual</h2>
+      <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Selecciona el mes y marca los bloques que trabajarás: AM `07:10 - 12:00`, PM `16:00 - 21:00` o Sábado `09:00 - 14:00`. Con esto se habilita el acceso a tus clases y a los perfiles de alumnas.</p>
+
+      <form method="post" class="mt-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="set_month_shifts" />
+        <div>
+          <label class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Mes</label>
+          <input type="month" name="month" value="{{ teacher_selected_month }}" required class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" />
+        </div>
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Bloques</p>
+          <div class="mt-3 space-y-3">
+            {% for value, label in teacher_shift_choices %}
+              <label class="flex items-center gap-3 rounded-[1.2rem] border border-olive/12 bg-ivory/70 px-4 py-3 text-sm text-charcoal">
+                <input type="checkbox" name="shift_kinds" value="{{ value }}" {% if value in teacher_selected_shift_kinds %}checked{% endif %} class="h-5 w-5 rounded border-olive/30 text-olive focus:ring-olive/20" />
+                <span class="font-medium">{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <button type="submit" class="btn-primary w-full">Guardar turno del mes</button>
+      </form>
+    </div>
+
+    <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Turno seleccionado</p>
+          <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">{{ teacher_selected_month_label }}</h2>
+        </div>
+        <span class="rounded-full border border-olive/15 bg-ivory px-4 py-2 text-xs font-medium uppercase tracking-luxe text-olive-gold">{{ teacher_selected_shift_kinds|length }} bloques</span>
+      </div>
+
+      <div class="mt-6 space-y-3">
+        {% if teacher_selected_shift_kinds %}
+          {% for value, label in teacher_shift_choices %}
+            {% if value in teacher_selected_shift_kinds %}
+              <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+                <p class="text-sm font-medium text-charcoal">{{ label }}</p>
+                <p class="mt-1 text-xs text-charcoal/70">{{ value|upper }} · {% if value == 'am' %}07:10 - 12:00{% elif value == 'pm' %}16:00 - 21:00{% else %}09:00 - 14:00{% endif %}</p>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <p class="rounded-[1.5rem] border border-dashed border-olive/12 bg-ivory/50 p-5 text-sm text-charcoal/70">No hay bloques seleccionados para este mes. Marca AM, PM y/o Sábado para habilitar tu agenda.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda de trabajo</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Clases visibles según tus turnos</h2>
+      </div>
+      <p class="text-sm text-charcoal/70">Haz clic sobre un bloque para abrir la clase y gestionar asistencia, perfiles y notas privadas.</p>
+    </div>
+
+    {% if calendar_weeks %}
+      <div class="mt-6 flex flex-wrap gap-3">
+        {% for week in calendar_weeks %}
+          <button
+            type="button"
+            @click="activeWeek = {{ forloop.counter0 }}"
+            :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-ivory text-charcoal border-olive/15 hover:bg-olive/5'"
+            class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Semana {{ forloop.counter }} · {{ week.label }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="mt-6 space-y-6">
+        {% for week in calendar_weeks %}
+          <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak>
+            <div class="overflow-x-auto">
+              <div class="grid min-w-[920px] grid-cols-[96px_repeat(7,minmax(116px,1fr))] gap-3">
+                <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/60 p-4 text-xs font-medium uppercase tracking-luxe text-charcoal/50">Hora</div>
+                {% for day in week.days %}
+                  <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/60 p-4">
+                    <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">{{ day.weekday|slice:":3" }}</p>
+                    <p class="mt-2 font-serif text-xl text-charcoal">{{ day.date|date:"d M" }}</p>
+                    <p class="mt-1 text-xs text-charcoal/60">
+                      {% if day.is_holiday %}
+                        Feriado · {{ day.holiday_name }}
+                      {% elif day.is_closed %}
+                        Sin turno
+                      {% else %}
+                        Agenda activa
+                      {% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+
+                {% for row in week.time_rows %}
+                  <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/60 px-4 py-5 text-sm font-medium text-charcoal/70">{{ row.time_key }}</div>
+                  {% for slot in row.cells %}
+                    <div>
+                      {% if slot %}
+                        <a href="?month={{ teacher_selected_month }}&session={{ slot.session.id }}#detalle-clase" class="group flex h-full min-h-[112px] flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_selected %}border-olive bg-olive text-ivory shadow-sm{% else %}border-olive/12 bg-ivory/70 text-charcoal{% endif %}">
+                          <div class="flex items-start justify-between gap-3">
+                            <div>
+                              <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                              <p class="mt-1 text-xs {% if slot.is_selected %}text-ivory/75{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
+                            </div>
+                            <span class="shrink-0 self-start rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none {% if slot.student_count %}{% if slot.is_selected %}bg-ivory/15 text-ivory{% else %}bg-olive/10 text-olive{% endif %}{% else %}{% if slot.is_selected %}bg-ivory/10 text-ivory{% else %}bg-cloud/70 text-charcoal/70{% endif %}{% endif %}">
+                              {% if slot.student_count %}Con alumnas{% else %}Sin alumnas{% endif %}
+                            </span>
+                          </div>
+                          <div class="mt-4 space-y-1 text-xs {% if slot.is_selected %}text-ivory/80{% else %}text-charcoal/60{% endif %}">
+                            <p>{{ slot.student_count }} alumnas</p>
+                            <p>{{ slot.attendance_present_count }} presentes marcadas</p>
+                            {% if slot.single_class_count %}<p>{{ slot.single_class_count }} clase(s) suelta(s)</p>{% endif %}
+                          </div>
+                        </a>
+                      {% else %}
+                        <div class="h-full min-h-[112px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mt-6 rounded-[1.5rem] border border-dashed border-olive/12 bg-ivory/50 p-6 text-sm text-charcoal/70">
+        No hay clases visibles todavía en tu agenda. Primero registra un turno y luego selecciona un bloque para abrir la ficha de la clase.
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="detalle-clase" class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Detalle de clase</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">
+          {% if selected_teacher_session %}
+            {{ selected_teacher_session_local_start|date:"l d \d\e F" }}
+          {% else %}
+            Selecciona un bloque
+          {% endif %}
+        </h2>
+        {% if selected_teacher_session %}
+          <p class="mt-2 text-sm text-charcoal/70">{{ selected_teacher_session_local_start|date:"H:i" }} - {{ selected_teacher_session_local_end|date:"H:i" }}</p>
+        {% else %}
+          <p class="mt-2 text-sm text-charcoal/70">Abre una clase desde la agenda para ver alumnas, asistencia y notas privadas.</p>
+        {% endif %}
+      </div>
+      {% if selected_teacher_session %}
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+            <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Alumnas</p>
+            <p class="mt-2 font-serif text-2xl text-charcoal">{{ selected_teacher_stats.student_count }}</p>
+          </div>
+          <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+            <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Total reservas</p>
+            <p class="mt-2 font-serif text-2xl text-charcoal">{{ selected_teacher_stats.total_count }}</p>
+          </div>
+          <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+            <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Cupos libres</p>
+            <p class="mt-2 font-serif text-2xl text-charcoal">{{ selected_teacher_stats.capacity_left }}</p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if selected_teacher_session %}
+      <div class="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_attendance" />
+            <input type="hidden" name="session_id" value="{{ selected_teacher_session.id }}" />
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Asistencia de alumnas</p>
+                <h3 class="mt-3 font-serif text-2xl font-light text-charcoal">Marca presencia por clase</h3>
+              </div>
+              <button type="submit" class="btn-primary">Guardar asistencia</button>
+            </div>
+
+            {% if selected_teacher_session_students %}
+              <div class="mt-4 space-y-4">
+                {% for item in selected_teacher_session_students %}
+                  <label class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div class="flex items-start gap-4">
+                        <input type="checkbox" name="present_user_ids" value="{{ item.user.id }}" {% if item.is_present %}checked{% endif %} class="mt-1 h-5 w-5 rounded border-olive/30 text-olive focus:ring-olive/20" />
+                        <div>
+                          <p class="text-base font-medium text-charcoal">{{ item.user.get_full_name|default:item.user.email }}</p>
+                          <p class="mt-1 text-sm text-charcoal/70">{{ item.user.email }}{% if item.user.telefono %} · {{ item.user.telefono }}{% endif %}</p>
+                          <p class="mt-1 text-xs text-charcoal/60">Asistencias registradas: {{ item.attendance_present_total }} / {{ item.attendance_record_total }}</p>
+                          {% if item.marked_at %}
+                            <p class="mt-1 text-xs text-charcoal/50">Última marca en esta clase: {{ item.marked_at }}</p>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="grid gap-3 md:grid-cols-2 lg:max-w-xl">
+                        <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                          <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Salud relevante</p>
+                          <p class="mt-2 text-sm text-charcoal/70">{{ item.user.informacion_salud|default:"Sin información registrada." }}</p>
+                        </div>
+                        <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                          <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Consideraciones</p>
+                          <p class="mt-2 text-sm text-charcoal/70">{{ item.user.consideraciones_clase|default:"Sin consideraciones adicionales." }}</p>
+                        </div>
+                        <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                          <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Contacto emergencia</p>
+                          <p class="mt-2 text-sm text-charcoal/70">{{ item.user.contacto_emergencia|default:"No informado." }}</p>
+                        </div>
+                        <div class="rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                          <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Teléfono emergencia</p>
+                          <p class="mt-2 text-sm text-charcoal/70">{{ item.user.telefono_emergencia|default:"No informado." }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-4 rounded-[1.5rem] border border-dashed border-olive/12 bg-ivory/50 p-6 text-sm text-charcoal/70">
+                Esta clase aún no tiene alumnas registradas.
+                {% if selected_teacher_stats.single_class_count %}
+                  Hay {{ selected_teacher_stats.single_class_count }} solicitud(es) de clase suelta activa(s), pero no generan perfil interno de alumna.
+                {% endif %}
+              </div>
+            {% endif %}
+          </form>
+        </div>
+
+        <div class="space-y-4">
+          <form method="post" class="rounded-[1.8rem] border border-olive/12 bg-ivory/70 p-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_teacher_note" />
+            <input type="hidden" name="session_id" value="{{ selected_teacher_session.id }}" />
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Nota privada</p>
+            <h3 class="mt-3 font-serif text-2xl font-light text-charcoal">Observaciones de la profesora</h3>
+            <p class="mt-3 text-sm text-charcoal/70">Visible solo para ti y para administración.</p>
+            <textarea name="teacher_note" rows="8" class="mt-4 block w-full rounded-2xl border border-olive/15 bg-card px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="Ejemplo: ajustes de carga, observaciones posturales, seguimiento por lesión, etc.">{{ selected_teacher_note }}</textarea>
+            <button type="submit" class="btn-primary mt-4 w-full">Guardar nota</button>
+          </form>
+
+          <div class="rounded-[1.8rem] border border-olive/12 bg-ivory/70 p-6">
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Métricas útiles</p>
+            <h3 class="mt-3 font-serif text-2xl font-light text-charcoal">Resumen de esta clase</h3>
+            <div class="mt-5 space-y-3 text-sm text-charcoal/70">
+              <div class="flex items-center justify-between rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                <span>Alumnas con perfil</span>
+                <span class="font-medium text-charcoal">{{ selected_teacher_stats.student_count }}</span>
+              </div>
+              <div class="flex items-center justify-between rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                <span>Reservas totales</span>
+                <span class="font-medium text-charcoal">{{ selected_teacher_stats.total_count }}</span>
+              </div>
+              <div class="flex items-center justify-between rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                <span>Clases sueltas activas</span>
+                <span class="font-medium text-charcoal">{{ selected_teacher_stats.single_class_count }}</span>
+              </div>
+              <div class="flex items-center justify-between rounded-[1.1rem] border border-olive/10 bg-card px-4 py-3">
+                <span>Cupos disponibles</span>
+                <span class="font-medium text-charcoal">{{ selected_teacher_stats.capacity_left }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

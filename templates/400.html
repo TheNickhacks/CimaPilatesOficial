@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Solicitud inválida | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-4xl px-5 py-16 lg:px-8">
+  <div class="rounded-[2rem] bg-olive p-10 text-ivory">
+    <p class="text-xs font-medium uppercase tracking-luxe text-butter">Error 400</p>
+    <h1 class="mt-4 font-serif text-4xl font-light leading-tight">No pudimos procesar tu solicitud</h1>
+    <p class="mt-4 max-w-2xl text-sm leading-relaxed text-ivory/80">
+      Revisa los datos ingresados e intenta nuevamente.
+    </p>
+    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+      <a href="{% url 'core:home' %}" class="inline-flex items-center justify-center rounded-full bg-ivory px-6 py-3 text-sm font-medium text-olive shadow-sm transition-transform hover:-translate-y-0.5">Ir al inicio</a>
+      <a href="{% url 'core:dashboard_redirect' %}" class="inline-flex items-center justify-center rounded-full border border-ivory/25 px-6 py-3 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">Ir al panel</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+

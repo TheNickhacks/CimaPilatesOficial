@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block title %}Agenda | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div class="flex items-center gap-4">
+        {% if profile_photo_url %}
+          <img src="{{ profile_photo_url }}" alt="Foto de perfil de {{ request.user.get_full_name|default:request.user.email }}" class="h-20 w-20 rounded-full border border-ivory/20 object-cover shadow-sm" />
+        {% else %}
+          <div class="flex h-20 w-20 items-center justify-center rounded-full border border-ivory/20 bg-ivory/10 font-serif text-2xl text-ivory">
+            {{ request.user.profile_initials }}
+          </div>
+        {% endif %}
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Agenda de clases</p>
+          <h1 class="mt-3 font-serif text-4xl font-light leading-tight">Reserva y gestiona tus bloques</h1>
+          <p class="mt-3 max-w-2xl text-sm leading-relaxed text-ivory/80">La reserva se habilita con una semana exacta de anticipacion, cada clase admite 4 alumnas y el sistema valida automaticamente tu plan vigente y clases disponibles.</p>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <a href="{% url 'accounts:profile' %}" class="rounded-full border border-ivory/30 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">Mi perfil</a>
+        <a href="{% url 'core:student_dashboard' %}" class="rounded-full bg-ivory px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-butter">Volver al panel</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-4 lg:grid-cols-3">
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Plan activo</p>
+      {% if active_plan_request %}
+        <p class="mt-3 font-serif text-3xl text-olive">{{ active_plan_request.plan.nombre }}</p>
+        <p class="mt-2 text-sm text-charcoal/70">{{ active_plan_request.plan.frecuencia }} · {{ active_plan_request.get_periodo_display }}</p>
+      {% else %}
+        <p class="mt-3 font-serif text-3xl text-olive">Sin plan activo</p>
+        <p class="mt-2 text-sm text-charcoal/70">Necesitas un plan vigente para reservar clases.</p>
+      {% endif %}
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases restantes</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ plan_remaining_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Se descuenta por reservas dentro de la vigencia del plan (incluye ajustes si existen).</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Reservas visibles</p>
+      <p class="mt-3 font-serif text-3xl text-olive">{{ upcoming_reservations_count }}</p>
+      <p class="mt-2 text-sm text-charcoal/70">Corresponden a clases dentro de la ventana actual de agenda.</p>
+    </div>
+  </div>
+
+  <div
+    class="mt-8"
+    x-data="{
+      activeWeek: {{ default_calendar_week_index|default:0 }},
+      panelOpen: false,
+      noteDraft: '',
+      selectedSlot: null,
+      openSlot(el) {
+        this.selectedSlot = {
+          sessionId: el.dataset.sessionId || '',
+          reservationId: el.dataset.reservationId || '',
+          dayLabel: el.dataset.dayLabel || '',
+          timeLabel: el.dataset.timeLabel || '',
+          teacherLabel: el.dataset.teacherLabel || '',
+          capacityLabel: el.dataset.capacityLabel || '',
+          availableLabel: el.dataset.availableLabel || '',
+          canBook: el.dataset.canBook === 'true',
+          isBooked: el.dataset.isBooked === 'true',
+          blockedReason: el.dataset.blockedReason || '',
+          bookingOpensAtLabel: el.dataset.bookingOpensAtLabel || '',
+          note: el.dataset.note || '',
+        };
+        this.noteDraft = this.selectedSlot.note;
+        this.panelOpen = true;
+      },
+      closePanel() {
+        this.panelOpen = false;
+      }
+    }"
+  >
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vista calendario</p>
+        <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Agenda semanal</h2>
+        <p class="mt-2 text-sm text-charcoal/65">Usa las semanas para navegar la agenda. Todos los horarios se muestran en hora de Santiago de Chile.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% for week in calendar_weeks %}
+          <button
+            type="button"
+            @click="activeWeek = {{ forloop.counter0 }}"
+            :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-card text-charcoal border-olive/15 hover:bg-olive/5'"
+            class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Semana {{ forloop.counter }} · {{ week.label }}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for week in calendar_weeks %}
+      <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak class="mt-6">
+        <div class="overflow-x-auto rounded-[2rem] border border-olive/12 bg-card shadow-sm">
+          <div class="min-w-[1120px]">
+            <div class="grid grid-cols-[92px_repeat(7,minmax(150px,1fr))]">
+              <div class="border-b border-r border-olive/10 bg-olive px-4 py-5 text-xs font-medium uppercase tracking-luxe text-butter">Hora</div>
+              {% for day in week.days %}
+                <div class="border-b border-olive/10 bg-olive px-4 py-5 text-ivory {% if not forloop.last %}border-r{% endif %}">
+                  <p class="text-xs font-medium uppercase tracking-luxe text-butter">{{ day.date|date:"D" }}</p>
+                  <p class="mt-2 font-serif text-2xl">{{ day.date|date:"d" }}</p>
+                  <p class="mt-1 text-sm text-ivory/75">{{ day.date|date:"d/m" }}</p>
+                  {% if day.is_holiday %}
+                    <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Feriado</p>
+                    <p class="mt-1 text-[11px] text-ivory/65">{{ day.holiday_name }}</p>
+                  {% elif day.is_closed %}
+                    <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Sin clases</p>
+                  {% endif %}
+                </div>
+              {% endfor %}
+
+              {% for row in week.time_rows %}
+                <div class="border-r border-b border-olive/10 bg-ivory/60 px-3 py-4 text-sm font-medium text-charcoal">
+                  {{ row.time_key }}
+                </div>
+                {% for slot in row.cells %}
+                  <div class="border-b border-olive/10 p-2 {% if not forloop.last %}border-r{% endif %}">
+                    {% if slot %}
+                      <button
+                        type="button"
+                        @click="openSlot($el)"
+                        data-session-id="{{ slot.session.id }}"
+                        data-reservation-id="{{ slot.user_reservation.id|default:'' }}"
+                        data-day-label="{{ slot.date_label }}"
+                        data-time-label="{{ slot.time_label }}"
+                        data-teacher-label="{{ slot.teacher_label }}"
+                        data-capacity-label="{{ slot.session.capacidad_maxima }}"
+                        data-available-label="{{ slot.capacity_left }}"
+                        data-can-book="{{ slot.can_book|yesno:'true,false' }}"
+                        data-is-booked="{{ slot.is_booked|yesno:'true,false' }}"
+                        data-blocked-reason="{{ slot.blocked_reason }}"
+                        data-booking-opens-at-label="{{ slot.booking_opens_at_label }}"
+                        data-note="{{ slot.user_reservation.nota|default:'' }}"
+                        class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_booked %}border-olive bg-olive text-ivory{% elif slot.can_book %}border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35{% else %}border-olive/10 bg-ivory/55 text-charcoal/75{% endif %}"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div>
+                            <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                            <p class="mt-1 text-xs {% if slot.is_booked %}text-ivory/80{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
+                          </div>
+                          <span class="shrink-0 self-start rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none {% if slot.is_booked %}bg-ivory/15 text-ivory{% elif slot.can_book %}bg-olive text-ivory{% else %}bg-cloud/70 text-charcoal/70{% endif %}">
+                            {% if slot.is_booked %}
+                              Reservada
+                            {% elif slot.can_book %}
+                              Disponible
+                            {% else %}
+                              Bloqueada
+                            {% endif %}
+                          </span>
+                        </div>
+                        <div class="mt-3">
+                          <p class="text-xs {% if slot.is_booked %}text-ivory/85{% else %}text-charcoal/65{% endif %}">
+                            {{ slot.capacity_left }} cupos disponibles
+                          </p>
+                        </div>
+                      </button>
+                    {% else %}
+                      <div class="h-full min-h-[92px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div
+      x-show="panelOpen"
+      x-cloak
+      class="fixed inset-0 z-50"
+      x-transition.opacity
+    >
+      <div class="absolute inset-0 bg-charcoal/30" @click="closePanel()"></div>
+      <div class="absolute inset-y-0 right-0 flex w-full max-w-xl">
+        <aside
+          class="ml-auto flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-olive/10 bg-card shadow-2xl"
+          x-transition:enter="transform transition ease-out duration-200"
+          x-transition:enter-start="translate-x-full"
+          x-transition:enter-end="translate-x-0"
+          x-transition:leave="transform transition ease-in duration-150"
+          x-transition:leave-start="translate-x-0"
+          x-transition:leave-end="translate-x-full"
+        >
+          <div class="flex items-start justify-between gap-4 border-b border-olive/10 px-6 py-6">
+            <div>
+              <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Detalle de clase</p>
+              <h3 class="mt-3 font-serif text-3xl text-charcoal" x-text="selectedSlot ? selectedSlot.timeLabel : ''"></h3>
+              <p class="mt-2 text-sm text-charcoal/65" x-text="selectedSlot ? selectedSlot.dayLabel : ''"></p>
+            </div>
+            <button type="button" @click="closePanel()" class="rounded-full border border-olive/15 px-4 py-2 text-sm font-medium text-charcoal/70 transition-colors hover:bg-olive/5">
+              Cerrar
+            </button>
+          </div>
+
+          <div class="space-y-6 px-6 py-6">
+            <div class="grid gap-4 md:grid-cols-2">
+              <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cupos disponibles</p>
+                <p class="mt-3 font-serif text-3xl text-charcoal" x-text="selectedSlot ? selectedSlot.availableLabel : '0'"></p>
+                <p class="mt-2 text-sm text-charcoal/60">Capacidad total: <span x-text="selectedSlot ? selectedSlot.capacityLabel : '0'"></span></p>
+              </div>
+              <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Profesora</p>
+                <p class="mt-3 font-serif text-2xl text-charcoal" x-text="selectedSlot ? selectedSlot.teacherLabel : ''"></p>
+              </div>
+            </div>
+
+            <div
+              x-show="selectedSlot && !selectedSlot.canBook && !selectedSlot.isBooked"
+              x-cloak
+              class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5"
+            >
+              <p class="text-sm font-medium text-charcoal" x-text="selectedSlot ? selectedSlot.blockedReason : ''"></p>
+              <p class="mt-2 text-sm text-charcoal/65" x-show="selectedSlot && selectedSlot.bookingOpensAtLabel">
+                Apertura: <span x-text="selectedSlot ? selectedSlot.bookingOpensAtLabel : ''"></span>
+              </p>
+            </div>
+
+            <form
+              method="post"
+              x-show="selectedSlot && selectedSlot.canBook && !selectedSlot.isBooked"
+              x-cloak
+              class="space-y-4"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="action" value="book" />
+              <input type="hidden" name="session_id" :value="selectedSlot ? selectedSlot.sessionId : ''" />
+              <div>
+                <label class="text-sm font-medium text-charcoal">Nota</label>
+                <textarea
+                  name="nota"
+                  rows="5"
+                  x-model="noteDraft"
+                  class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10"
+                  placeholder="Agrega una nota si lo necesitas"
+                ></textarea>
+              </div>
+              <button type="submit" class="btn-primary w-full">Reservar clase</button>
+            </form>
+
+            <div
+              x-show="selectedSlot && selectedSlot.isBooked"
+              x-cloak
+              class="space-y-4"
+            >
+              <div class="rounded-[1.5rem] border border-olive/12 bg-olive px-5 py-4 text-ivory">
+                <p class="text-sm font-medium">Ya estas inscrita en esta clase.</p>
+              </div>
+              <div>
+                <label class="text-sm font-medium text-charcoal">Nota</label>
+                <textarea
+                  rows="5"
+                  x-model="noteDraft"
+                  disabled
+                  class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal/70"
+                ></textarea>
+              </div>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel" />
+                <input type="hidden" name="reservation_id" :value="selectedSlot ? selectedSlot.reservationId : ''" />
+                <button type="submit" class="w-full rounded-full border border-red-200 px-5 py-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-50">
+                  Eliminar clase
+                </button>
+              </form>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

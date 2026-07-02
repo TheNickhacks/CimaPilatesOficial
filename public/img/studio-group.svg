@@ -1,0 +1,16 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="#EDEFAB"/>
+  <rect x="110" y="120" width="980" height="660" rx="42" fill="#FFFFFF" opacity="0.72"/>
+  <rect x="190" y="200" width="820" height="64" rx="20" fill="#51604D"/>
+  <rect x="190" y="308" width="470" height="18" rx="9" fill="#CECAA8"/>
+  <rect x="190" y="344" width="620" height="18" rx="9" fill="#DCDDE1"/>
+  <rect x="190" y="380" width="540" height="18" rx="9" fill="#DCDDE1"/>
+  <rect x="190" y="500" width="820" height="190" rx="30" fill="#EBEBD9" stroke="#51604D" stroke-width="8"/>
+  <circle cx="310" cy="600" r="42" fill="#51604D"/>
+  <circle cx="530" cy="600" r="42" fill="#575627"/>
+  <circle cx="750" cy="600" r="42" fill="#CECAA8"/>
+  <circle cx="310" cy="600" r="18" fill="#EDEFAB"/>
+  <circle cx="530" cy="600" r="18" fill="#EDEFAB"/>
+  <circle cx="750" cy="600" r="18" fill="#51604D"/>
+  <text x="190" y="814" fill="#212426" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="700">Clases guiadas</text>
+</svg>

@@ -1,0 +1,17 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="#EBEBD9"/>
+  <circle cx="220" cy="180" r="110" fill="#EDEFAB" opacity="0.72"/>
+  <circle cx="1000" cy="140" r="150" fill="#CECAA8" opacity="0.5"/>
+  <rect x="140" y="560" width="920" height="110" rx="34" fill="#51604D" opacity="0.14"/>
+  <rect x="260" y="330" width="680" height="180" rx="36" fill="#FFFFFF" stroke="#51604D" stroke-width="10"/>
+  <rect x="330" y="378" width="540" height="86" rx="24" fill="#DCDDE1"/>
+  <rect x="360" y="392" width="210" height="58" rx="18" fill="#51604D" opacity="0.86"/>
+  <rect x="618" y="392" width="210" height="58" rx="18" fill="#575627" opacity="0.9"/>
+  <rect x="470" y="250" width="260" height="72" rx="24" fill="#575627"/>
+  <circle cx="562" cy="254" r="18" fill="#EDEFAB"/>
+  <circle cx="638" cy="254" r="18" fill="#CECAA8"/>
+  <path d="M284 526H916" stroke="#51604D" stroke-width="14" stroke-linecap="round"/>
+  <path d="M340 526V588" stroke="#51604D" stroke-width="14" stroke-linecap="round"/>
+  <path d="M860 526V588" stroke="#51604D" stroke-width="14" stroke-linecap="round"/>
+  <text x="82" y="820" fill="#212426" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="700">Reformer flow</text>
+</svg>

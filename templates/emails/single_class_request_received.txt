@@ -1,0 +1,12 @@
+Hola {{ full_name }},
+
+Recibimos tu solicitud de clase suelta para {{ class_datetime_label }}.
+
+Metodo de pago seleccionado: {{ payment_method_label }}.
+
+Nuestro equipo revisara la informacion enviada y te contactara cuando la solicitud haya sido validada.
+
+Si necesitas ayuda, puedes escribir a {{ reply_to_email }}.
+
+Cima Pilates
+{{ site_url }}

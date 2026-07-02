@@ -1,0 +1,10 @@
+Hola {{ full_name }},
+
+Recibimos tu solicitud para {{ plan_name }} en modalidad {{ period_label }}.
+
+Nuestro equipo revisara tu solicitud y te escribira cuando el pago haya sido validado.
+
+Si necesitas ayuda, puedes responder a este correo o escribir a {{ reply_to_email }}.
+
+Cima Pilates
+{{ site_url }}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}Clase Suelta | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Clase suelta</p>
+        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Reserva tu clase sin necesidad de iniciar sesion</h1>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">Selecciona un bloque disponible, completa tus datos personales y elige la forma de pago. La solicitud queda registrada y te enviaremos un correo confirmando su recepcion.</p>
+      </div>
+      {% if single_class_plan %}
+        <div class="rounded-[1.5rem] bg-ivory/10 px-6 py-5 text-right">
+          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Valor clase suelta</p>
+          <p class="mt-2 font-serif text-4xl text-ivory">$9.990</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if single_class_success %}
+    <div class="mt-6 rounded-[1.75rem] border border-olive/12 bg-gradient-to-br from-butter via-card to-ivory p-6 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud recibida</p>
+      <h2 class="mt-3 font-serif text-2xl text-charcoal">Ya registramos tu clase suelta</h2>
+      <p class="mt-3 text-sm leading-relaxed text-charcoal/75">Te enviaremos un correo confirmando la recepcion de tu solicitud y luego nuestro equipo revisara el pago para completar la validacion.</p>
+    </div>
+  {% endif %}
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]" x-data="{ activeWeek: {{ default_calendar_week_index|default:0 }} }">
+    <div>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vista calendario</p>
+          <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Agenda de clase suelta</h2>
+          <p class="mt-2 text-sm text-charcoal/65">Selecciona un bloque disponible para habilitar el formulario de inscripción.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {% for week in calendar_weeks %}
+            <button
+              type="button"
+              @click="activeWeek = {{ forloop.counter0 }}"
+              :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-card text-charcoal border-olive/15 hover:bg-olive/5'"
+              class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+            >
+              Semana {{ forloop.counter }} · {{ week.label }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% for week in calendar_weeks %}
+        <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak class="mt-6">
+          <div class="overflow-x-auto rounded-[2rem] border border-olive/12 bg-card shadow-sm">
+            <div class="min-w-[1120px]">
+              <div class="grid grid-cols-[92px_repeat(7,minmax(150px,1fr))]">
+                <div class="border-b border-r border-olive/10 bg-olive px-4 py-5 text-xs font-medium uppercase tracking-luxe text-butter">Hora</div>
+                {% for day in week.days %}
+                  <div class="border-b border-olive/10 bg-olive px-4 py-5 text-ivory {% if not forloop.last %}border-r{% endif %}">
+                    <p class="text-xs font-medium uppercase tracking-luxe text-butter">{{ day.date|date:"D" }}</p>
+                    <p class="mt-2 font-serif text-2xl">{{ day.date|date:"d" }}</p>
+                    <p class="mt-1 text-sm text-ivory/75">{{ day.date|date:"d/m" }}</p>
+                    {% if day.is_holiday %}
+                      <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Feriado</p>
+                      <p class="mt-1 text-[11px] text-ivory/65">{{ day.holiday_name }}</p>
+                    {% elif day.is_closed %}
+                      <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Sin clases</p>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+
+                {% for row in week.time_rows %}
+                  <div class="border-r border-b border-olive/10 bg-ivory/60 px-3 py-4 text-sm font-medium text-charcoal">
+                    {{ row.time_key }}
+                  </div>
+                  {% for slot in row.cells %}
+                    <div class="border-b border-olive/10 p-2 {% if not forloop.last %}border-r{% endif %}">
+                      {% if slot %}
+                        {% if slot.can_book %}
+                          <a
+                            href="{% url 'core:public_single_class_booking' %}?session={{ slot.session.id }}#reserva-clase-suelta"
+                            class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_selected %}border-olive bg-olive text-ivory ring-2 ring-olive/20{% else %}border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35{% endif %}"
+                          >
+                            <div class="flex items-start justify-between gap-2">
+                              <div>
+                                <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                                <p class="mt-1 text-xs {% if slot.is_selected %}text-ivory/80{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
+                              </div>
+                              <span class="shrink-0 self-start rounded-full bg-olive px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none {% if slot.is_selected %}bg-ivory/15 text-ivory{% else %}text-ivory{% endif %}">
+                                Disponible
+                              </span>
+                            </div>
+                            <div class="mt-3">
+                              <p class="text-xs {% if slot.is_selected %}text-ivory/85{% else %}text-charcoal/65{% endif %}">{{ slot.capacity_left }} cupos disponibles</p>
+                            </div>
+                          </a>
+                        {% else %}
+                          <div class="flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border border-olive/10 bg-ivory/55 p-3 text-left text-charcoal/75">
+                            <div class="flex items-start justify-between gap-2">
+                              <div>
+                                <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                                <p class="mt-1 text-xs text-charcoal/60">{{ slot.ends_at_local|date:"H:i" }}</p>
+                              </div>
+                              <span class="shrink-0 self-start rounded-full bg-cloud/70 px-2.5 py-1 text-[10px] font-medium uppercase tracking-luxe leading-none text-charcoal/70">
+                                Bloqueada
+                              </span>
+                            </div>
+                            <div class="mt-3">
+                              <p class="text-xs text-charcoal/60">{{ slot.blocked_reason }}</p>
+                            </div>
+                          </div>
+                        {% endif %}
+                      {% else %}
+                        <div class="h-full min-h-[92px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="reserva-clase-suelta" class="rounded-[2rem] border border-olive/12 bg-card p-8">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud de clase suelta</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Completa tus datos</h2>
+
+      {% if selected_single_class_session %}
+        <div class="mt-5 rounded-[1.5rem] border border-olive/10 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Bloque seleccionado</p>
+          <p class="mt-3 font-serif text-2xl text-charcoal">{{ selected_single_class_session_local_start|date:"d/m/Y" }}</p>
+          <p class="mt-1 text-sm text-charcoal/70">{{ selected_single_class_session_local_start|date:"H:i" }} - {{ selected_single_class_session_local_end|date:"H:i" }}</p>
+        </div>
+      {% else %}
+        <div class="mt-5 rounded-[1.5rem] border border-dashed border-olive/20 bg-ivory/50 p-5">
+          <p class="text-sm text-charcoal/70">Primero selecciona un horario disponible desde la agenda para habilitar este formulario.</p>
+        </div>
+      {% endif %}
+
+      {% if single_class_booking_form.non_field_errors %}
+        <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {% for error in single_class_booking_form.non_field_errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
+        {% csrf_token %}
+        {{ single_class_booking_form.session_id }}
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="{{ single_class_booking_form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.nombre.label }}</label>
+            {{ single_class_booking_form.nombre }}
+            {% for error in single_class_booking_form.nombre.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label for="{{ single_class_booking_form.apellido.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.apellido.label }}</label>
+            {{ single_class_booking_form.apellido }}
+            {% for error in single_class_booking_form.apellido.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="{{ single_class_booking_form.rut.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.rut.label }}</label>
+            {{ single_class_booking_form.rut }}
+            {% for error in single_class_booking_form.rut.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label for="{{ single_class_booking_form.telefono.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.telefono.label }}</label>
+            {{ single_class_booking_form.telefono }}
+            {% for error in single_class_booking_form.telefono.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+        <div>
+          <label for="{{ single_class_booking_form.email.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.email.label }}</label>
+          {{ single_class_booking_form.email }}
+          {% for error in single_class_booking_form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+          <label for="{{ single_class_booking_form.metodo_pago.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.metodo_pago.label }}</label>
+          {{ single_class_booking_form.metodo_pago }}
+          {% for error in single_class_booking_form.metodo_pago.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos de transferencia</p>
+          <div class="mt-4 space-y-2 text-sm text-charcoal/75">
+            {% for label, value in transfer_details %}
+              <p><span class="font-medium text-charcoal">{{ label }}:</span> {{ value }}</p>
+            {% endfor %}
+          </div>
+        </div>
+        <div>
+          <label for="{{ single_class_booking_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.comprobante.label }}</label>
+          {{ single_class_booking_form.comprobante }}
+          {% for error in single_class_booking_form.comprobante.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+          <label for="{{ single_class_booking_form.notas.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.notas.label }}</label>
+          {{ single_class_booking_form.notas }}
+          {% for error in single_class_booking_form.notas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <button type="submit" class="btn-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>Enviar solicitud de clase suelta</button>
+        <p class="text-xs leading-relaxed text-charcoal/55">Al enviar esta solicitud registramos tus datos para identificarte, revisar el pago y coordinar tu asistencia al estudio.</p>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

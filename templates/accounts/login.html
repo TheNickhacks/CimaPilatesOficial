@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Ingreso | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-24">
+  <div class="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-olive/12 lg:grid-cols-2">
+    <div class="hidden bg-olive p-10 text-ivory lg:flex lg:flex-col lg:justify-between">
+      <p class="text-xs font-medium uppercase tracking-luxe text-butter">Cima Pilates SpA</p>
+      <div>
+        <h2 class="font-serif text-4xl font-light leading-tight">Bienvenida de vuelta a tu cima.</h2>
+        <p class="mt-5 leading-relaxed text-ivory/80">Ingresa para gestionar tus reservas, planes y tu progreso en el estudio.</p>
+      </div>
+      <p class="text-sm text-ivory/65">Av. Concha y Toro 3346, Local 32 · Puente Alto</p>
+    </div>
+    <div class="bg-card p-8 md:p-10">
+      <h1 class="font-serif text-3xl font-light text-charcoal">Ingresar</h1>
+      <p class="mt-2 text-sm text-charcoal/65">Accede con tu correo y contraseña.</p>
+      <form method="post" class="mt-7 grid gap-4">
+        {% csrf_token %}
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+        {{ form.as_p }}
+        <button class="btn-primary w-full" type="submit">Entrar</button>
+      </form>
+      <p class="mt-6 text-sm text-charcoal/65">¿No tienes cuenta?
+        <a href="{% url 'accounts:signup_student' %}{% if request.GET.plan %}?plan={{ request.GET.plan|urlencode }}{% if request.GET.period %}&period={{ request.GET.period|urlencode }}{% endif %}{% endif %}" class="font-medium text-olive hover:text-olive-gold">Regístrate aquí</a>
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

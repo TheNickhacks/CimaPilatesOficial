@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Registro de Alumna | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-24">
+  <div class="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-olive/12 lg:grid-cols-2">
+    <div class="hidden bg-olive-gold p-10 text-ivory lg:flex lg:flex-col lg:justify-between">
+      <p class="text-xs font-medium uppercase tracking-luxe text-butter">Únete a Cima Pilates</p>
+      <div>
+        <h2 class="font-serif text-4xl font-light leading-tight">Crea tu cuenta y comienza tu camino.</h2>
+        <p class="mt-5 leading-relaxed text-ivory/80">Gestiona reservas, planes y tu historial desde un solo lugar, diseñado para acompañar tu bienestar.</p>
+      </div>
+      <p class="text-sm text-ivory/65">Pilates Reformer · Grupos reducidos · Puente Alto</p>
+    </div>
+    <div class="bg-card p-8 md:p-10">
+      <h1 class="font-serif text-3xl font-light text-charcoal">Registro de alumnas</h1>
+      <p class="mt-2 text-sm text-charcoal/65">Crea tu cuenta para gestionar reservas y planes.</p>
+      <form method="post" class="mt-7 grid gap-5">
+        {% csrf_token %}
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+        {% if form.non_field_errors %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="{{ form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.nombre.label }}</label>
+            {{ form.nombre }}
+            {% for error in form.nombre.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.apellido.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.apellido.label }}</label>
+            {{ form.apellido }}
+            {% for error in form.apellido.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="{{ form.rut.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.rut.label }}</label>
+            {{ form.rut }}
+            {% for error in form.rut.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.telefono.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.telefono.label }}</label>
+            {{ form.telefono }}
+            {% for error in form.telefono.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label for="{{ form.email.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.email.label }}</label>
+          {{ form.email }}
+          {% for error in form.email.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="{{ form.password1.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.password1.label }}</label>
+            {{ form.password1 }}
+            {% for error in form.password1.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.password2.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.password2.label }}</label>
+            {{ form.password2 }}
+            {% for error in form.password2.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <label for="{{ form.acepta_terminos.id_for_label }}" class="rounded-2xl border border-olive/12 bg-ivory/80 px-4 py-4">
+          <div class="flex items-start gap-3">
+            {{ form.acepta_terminos }}
+            <div class="text-sm leading-relaxed text-charcoal/75">
+              <p>Acepto los <a href="{% url 'accounts:terms' %}" target="_blank" rel="noopener noreferrer" class="font-medium text-olive hover:text-olive-gold">términos y condiciones</a> y autorizo el tratamiento de mis datos personales para la creación y administración de mi cuenta en Cima Pilates.</p>
+              <p class="mt-2 text-xs text-charcoal/60">Este consentimiento se registra junto con la fecha y hora de aceptación.</p>
+            </div>
+          </div>
+          {% for error in form.acepta_terminos.errors %}
+            <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </label>
+
+        <button class="btn-primary w-full" type="submit">Crear cuenta</button>
+      </form>
+      <p class="mt-6 text-sm text-charcoal/65">¿Ya tienes cuenta?
+        <a href="{% url 'accounts:login' %}{% if request.GET.plan %}?plan={{ request.GET.plan|urlencode }}{% if request.GET.period %}&period={{ request.GET.period|urlencode }}{% endif %}{% endif %}" class="font-medium text-olive hover:text-olive-gold">Ingresa aquí</a>
+      </p>
+      <p class="mt-3 text-xs leading-relaxed text-charcoal/55">
+        Puedes revisar el detalle del tratamiento de datos en
+        <a href="{% url 'accounts:terms' %}" target="_blank" rel="noopener noreferrer" class="font-medium text-olive hover:text-olive-gold">términos y condiciones</a>.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

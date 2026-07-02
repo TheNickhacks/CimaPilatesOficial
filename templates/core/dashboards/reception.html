@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Panel Recepción | Cima Pilates{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <p class="text-xs font-medium uppercase tracking-luxe text-butter">Panel de recepción</p>
+    <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Gestión diaria del estudio</h1>
+    <p class="mt-3 max-w-2xl leading-relaxed text-ivory/80">Flujos habilitados: asistencia manual, cobros locales, validación de cambios de plan y registro de clases sueltas.</p>
+  </div>
+
+  <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {% for item in items %}{% endfor %}
+    <a href="#" class="rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Asistencia</p>
+      <p class="mt-3 font-serif text-xl text-charcoal">Marcar asistencia manual</p>
+    </a>
+    <a href="#" class="rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cobros</p>
+      <p class="mt-3 font-serif text-xl text-charcoal">Registrar cobro local</p>
+    </a>
+    <a href="#" class="rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Planes</p>
+      <p class="mt-3 font-serif text-xl text-charcoal">Validar cambio de plan</p>
+    </a>
+    <a href="#" class="rounded-[1.5rem] border border-olive/12 bg-card p-7 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clase suelta</p>
+      <p class="mt-3 font-serif text-xl text-charcoal">Registrar clase suelta</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

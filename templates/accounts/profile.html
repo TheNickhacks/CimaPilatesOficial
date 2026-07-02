@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% block title %}Mi perfil{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-6xl px-5 py-12 lg:px-8">
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center">
+      {% if user.profile_photo_url %}
+        <img src="{{ user.profile_photo_url }}" alt="Foto de perfil de {{ user.get_full_name|default:user.email }}" class="h-24 w-24 rounded-full border border-ivory/20 object-cover shadow-sm" />
+      {% else %}
+        <div class="flex h-24 w-24 items-center justify-center rounded-full border border-ivory/20 bg-ivory/10 font-serif text-3xl text-ivory">
+          {{ user.profile_initials }}
+        </div>
+      {% endif %}
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Mi perfil</p>
+        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Gestiona tu cuenta y tus datos personales</h1>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-ivory/80">Aqui puedes modificar los datos editables de tu registro en `usuarios`, actualizar tu contrasena y mantener al dia la informacion importante para tus clases.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
+    <div class="rounded-[2rem] border border-olive/12 bg-card p-8 md:p-10">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos editables</p>
+          <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Actualiza tu informacion</h2>
+        </div>
+        <a href="{% url 'core:student_dashboard' %}#solicitud-plan" class="rounded-full border border-olive/20 px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-olive/5">Volver al panel</a>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="mt-8 grid gap-5">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_profile" />
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <div>
+            <label for="{{ form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.nombre.label }}</label>
+            {{ form.nombre }}
+            {% for error in form.nombre.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.apellido.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.apellido.label }}</label>
+            {{ form.apellido }}
+            {% for error in form.apellido.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <div>
+            <label for="{{ form.nombre_completo.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.nombre_completo.label }}</label>
+            {{ form.nombre_completo }}
+            <p class="mt-2 text-xs text-charcoal/55">Si lo dejas vacio, se completa automaticamente con nombre y apellido.</p>
+            {% for error in form.nombre_completo.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.rut.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.rut.label }}</label>
+            {{ form.rut }}
+            {% for error in form.rut.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <div>
+            <label for="{{ form.email.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.telefono.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.telefono.label }}</label>
+            {{ form.telefono }}
+            {% for error in form.telefono.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Informacion para tus clases</p>
+          <p class="mt-2 text-sm text-charcoal/65">Comparte antecedentes importantes para que el equipo conozca mejor tu contexto de practica.</p>
+          <div class="mt-5 grid gap-5">
+            <div>
+              <label for="{{ form.informacion_salud.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.informacion_salud.label }}</label>
+              {{ form.informacion_salud }}
+              {% for error in form.informacion_salud.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div>
+              <label for="{{ form.consideraciones_clase.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.consideraciones_clase.label }}</label>
+              {{ form.consideraciones_clase }}
+              {% for error in form.consideraciones_clase.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <label for="{{ form.contacto_emergencia.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.contacto_emergencia.label }}</label>
+                {{ form.contacto_emergencia }}
+                {% for error in form.contacto_emergencia.errors %}
+                  <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.telefono_emergencia.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.telefono_emergencia.label }}</label>
+                {{ form.telefono_emergencia }}
+                {% for error in form.telefono_emergencia.errors %}
+                  <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <div>
+            <label for="{{ form.fecha_nacimiento.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.fecha_nacimiento.label }}</label>
+            {{ form.fecha_nacimiento }}
+            {% for error in form.fecha_nacimiento.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.genero.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.genero.label }}</label>
+            {{ form.genero }}
+            {% for error in form.genero.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label for="{{ form.foto_perfil.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.foto_perfil.label }}</label>
+          {{ form.foto_perfil }}
+          <p class="mt-2 text-xs text-charcoal/55">Al subir una imagen se actualizan los campos de foto almacenados en tu cuenta.</p>
+          {% for error in form.foto_perfil.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <label class="flex items-start gap-3 text-sm text-charcoal">
+            {{ form.consentimiento_marketing }}
+            <span>
+              <span class="font-medium">{{ form.consentimiento_marketing.label }}</span>
+              <span class="mt-1 block text-xs text-charcoal/60">Ultima fecha registrada de consentimiento: {{ user.fecha_consentimiento|date:"d/m/Y H:i"|default:"Sin registro" }}</span>
+            </span>
+          </label>
+          {% for error in form.consentimiento_marketing.errors %}
+            <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Seguridad</p>
+          <div class="mt-4 grid gap-5 md:grid-cols-2">
+            <div>
+              <label for="{{ form.password1.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.password1.label }}</label>
+              {{ form.password1 }}
+              {% for error in form.password1.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div>
+              <label for="{{ form.password2.id_for_label }}" class="text-sm font-medium text-charcoal">{{ form.password2.label }}</label>
+              {{ form.password2 }}
+              {% for error in form.password2.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary w-full">Guardar cambios</button>
+      </form>
+    </div>
+
+    <div class="space-y-6">
+      <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Resumen</p>
+        <dl class="mt-5 space-y-4 text-sm text-charcoal/75">
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Rol</dt>
+            <dd class="mt-1 font-medium text-charcoal">{{ user.get_role_display }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Correo actual</dt>
+            <dd class="mt-1 font-medium text-charcoal">{{ user.email }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Antiguedad</dt>
+            <dd class="mt-1 font-medium text-charcoal">{{ user.seniority_months }} meses</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cuenta creada</dt>
+            <dd class="mt-1 font-medium text-charcoal">{{ user.created_at|date:"d/m/Y H:i" }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Privacidad y baja</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Gestion de datos personales</h2>
+        <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Puedes solicitar la eliminacion de tus datos personales para revision interna y tambien desactivar tu cuenta cuando quieras dejar de usar la plataforma.</p>
+
+        <div class="mt-5 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5 text-sm text-charcoal/75">
+          <p class="font-medium text-charcoal">Estado solicitud de eliminacion</p>
+          {% if user.solicitud_eliminacion_datos %}
+            <p class="mt-2">Solicitud enviada el {{ user.fecha_solicitud_eliminacion|date:"d/m/Y H:i" }}.</p>
+          {% else %}
+            <p class="mt-2">Aun no registras una solicitud de eliminacion de datos personales.</p>
+          {% endif %}
+        </div>
+
+        <form method="post" class="mt-5">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="request_data_deletion" />
+          <button type="submit" class="w-full rounded-full border border-olive/20 px-5 py-3 text-sm font-medium text-olive transition-colors hover:bg-olive/5">
+            Solicitar eliminacion de datos
+          </button>
+        </form>
+
+        <form method="post" class="mt-3 rounded-[1.5rem] border border-red-200 bg-red-50/70 p-5">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_account" />
+          <label class="flex items-start gap-3 text-sm text-charcoal">
+            <input type="checkbox" name="confirm_delete" value="1" class="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-200" />
+            <span>Confirmo que quiero desactivar mi cuenta y salir de la plataforma.</span>
+          </label>
+          <button type="submit" class="mt-4 w-full rounded-full bg-red-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-red-700">
+            Eliminar cuenta
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
