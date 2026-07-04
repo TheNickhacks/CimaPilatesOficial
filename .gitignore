@@ -1,4 +1,28 @@
+# Config sensible / específica de entorno
 .env
 docker-compose.yml
 Dockerfile.backend
 Dockerfile.frontend
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+staticfiles/
+db.sqlite3
+
+# Django runtime
+media/
+*.log
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
