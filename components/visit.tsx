@@ -33,8 +33,8 @@ export function Visit() {
               <span className="mt-1 block text-ivory/65">{SITE.metro}</span>
             </InfoCard>
             <InfoCard title="Lunes a viernes">
-              07:00 – 12:00 hrs
-              <span className="mt-1 block">16:00 – 22:00 hrs</span>
+              07:10 – 12:00 hrs
+              <span className="mt-1 block">16:00 – 21:00 hrs</span>
             </InfoCard>
             <InfoCard title="Sábado">09:00 – 14:00 hrs</InfoCard>
             <InfoCard title="Clase suelta">

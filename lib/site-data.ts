@@ -3,7 +3,7 @@ export const SITE = {
   legal: "Cima Pilates SpA",
   location: "Av. Concha y Toro 3346, Local 32, Puente Alto",
   metro: "Metro Sótero del Río",
-  hoursWeek: "Lunes a viernes · 07:00 – 12:00 y 16:00 – 22:00 hrs",
+  hoursWeek: "Lunes a viernes · 07:10 – 12:00 y 16:00 – 21:00 hrs",
   hoursSaturday: "Sábado · 09:00 – 14:00 hrs",
   singleClass: "$9.990",
 }

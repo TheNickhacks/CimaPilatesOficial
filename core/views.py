@@ -1019,8 +1019,8 @@ def home(request):
 	context = {
 		"waitlist_success": request.GET.get("waitlist") == "ok",
 		"lead_form": lead_form,
-		"hours_week": "Lunes a viernes: 07:00 - 21:00",
-		"hours_saturday": "Sábado: 08:00 - 14:00",
+		"hours_week": "Lunes a viernes: 07:10 - 12:00 y 16:00 - 21:00",
+		"hours_saturday": "Sábado: 09:00 - 14:00",
 		"location": "Club Cima Pilates, sector oriente de la ciudad",
 		"studio_images": [
 			{"src": "img/studio-reformer.svg", "title": "Sala Reformer", "text": "Clases guiadas en estaciones individuales."},
