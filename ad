@@ -1,0 +1,75 @@
+[1mdiff --git a/core/models.py b/core/models.py[m
+[1mindex 7a4cdd5..1c925c8 100644[m
+[1m--- a/core/models.py[m
+[1m+++ b/core/models.py[m
+[36m@@ -107,6 +107,8 @@[m [mclass ClassSession(models.Model):[m
+ 	starts_at = models.DateTimeField(unique=True)[m
+ 	ends_at = models.DateTimeField()[m
+ 	capacidad_maxima = models.PositiveIntegerField(default=4)[m
+[32m+[m	[32mis_blocked = models.BooleanField(default=False)[m
+[32m+[m	[32mblocked_reason = models.TextField(null=True, blank=True)[m
+ 	created_at = models.DateTimeField(auto_now_add=True)[m
+ 	updated_at = models.DateTimeField(auto_now=True)[m
+ [m
+[36m@@ -349,3 +351,61 @@[m [mclass TeacherSessionNote(models.Model):[m
+ [m
+ 	def __str__(self) -> str:[m
+ 		return f"{self.teacher_id} - {self.class_session_id}"[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass AdminActionType(models.TextChoices):[m
+[32m+[m	[32mPLAN_CONFIRMED = "plan_confirmado", "Plan confirmado"[m
+[32m+[m	[32mPLAN_REJECTED = "plan_rechazado", "Plan rechazado"[m
+[32m+[m	[32mPLAN_PRICE_UPDATED = "precio_plan_actualizado", "Precio de plan actualizado"[m
+[32m+[m	[32mCLASS_BOOKED = "clase_agendada", "Clase agendada"[m
+[32m+[m	[32mCLASS_BLOCKED = "clase_bloqueada", "Clase bloqueada"[m
+[32m+[m	[32mCLASS_UNBLOCKED = "clase_desbloqueada", "Clase desbloqueada"[m
+[32m+[m	[32mTEACHER_HOURS_ADJUSTED = "horas_profesora_ajustadas", "Horas de profesora ajustadas"[m
+[32m+[m	[32mBONUS_CLASSES_ADDED = "clases_extra_agregadas", "Clases extra agregadas"[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass AdminActionLog(models.Model):[m
+[32m+[m	[32mid = models.BigAutoField(primary_key=True)[m
+[32m+[m	[32mactor = models.ForeignKey([m
+[32m+[m		[32m"accounts.User",[m
+[32m+[m		[32mon_delete=models.SET_NULL,[m
+[32m+[m		[32mdb_column="actor_id",[m
+[32m+[m		[32mrelated_name="admin_actions",[m
+[32m+[m		[32mnull=True,[m
+[32m+[m		[32mblank=True,[m
+[32m+[m	[32m)[m
+[32m+[m	[32maction_type = models.CharField(max_length=50, choices=AdminActionType.choices)[m
+[32m+[m	[32mtarget_user = models.ForeignKey([m
+[32m+[m		[32m"accounts.User",[m
+[32m+[m		[32mon_delete=models.SET_NULL,[m
+[32m+[m		[32mdb_column="target_user_id",[m
+[32m+[m		[32mrelated_name="targeted_admin_actions",[m
+[32m+[m		[32mnull=True,[m
+[32m+[m		[32mblank=True,[m
+[32m+[m	[32m)[m
+[32m+[m	[32mplan_request = models.ForeignKey([m
+[32m+[m		[32mPlanRequest,[m
+[32m+[m		[32mon_delete=models.SET_NULL,[m
+[32m+[m		[32mdb_column="plan_request_id",[m
+[32m+[m		[32mrelated_name="admin_action_logs",[m
+[32m+[m		[32mnull=True,[m
+[32m+[m		[32mblank=True,[m
+[32m+[m	[32m)[m
+[32m+[m	[32mclass_session = models.ForeignKey([m
+[32m+[m		[32mClassSession,[m
+[32m+[m		[32mon_delete=models.SET_NULL,[m
+[32m+[m		[32mdb_column="class_session_id",[m
+[32m+[m		[32mrelated_name="admin_action_logs",[m
+[32m+[m		[32mnull=True,[m
+[32m+[m		[32mblank=True,[m
+[32m+[m	[32m)[m
+[32m+[m	[32mdetails = models.TextField(null=True, blank=True)[m
+[32m+[m	[32mcreated_at = models.DateTimeField(auto_now_add=True)[m
+[32m+[m
+[32m+[m	[32mclass Meta:[m
+[32m+[m		[32mmanaged = False[m
+[32m+[m		[32mdb_table = "registro_admin_acciones"[m
+[32m+[m		[32mordering = ("-created_at",)[m
+[32m+[m
+[32m+[m	[32mdef __str__(self) -> str:[m
+[32m+[m		[32mreturn f"{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}"[m

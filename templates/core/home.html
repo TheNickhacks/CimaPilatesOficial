@@ -171,71 +171,43 @@
     </p>
 
     <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <!-- 4 clases -->
-      <article class="flex flex-col rounded-[1.75rem] border border-olive/15 bg-card p-7 transition-transform hover:-translate-y-1">
-        <span class="font-serif text-4xl font-light text-olive">04</span>
-        <h3 class="mt-4 font-serif text-xl">4 clases al mes</h3>
-        <p class="mt-1 text-sm text-charcoal/65">1 vez por semana</p>
-        <p class="mt-6 font-serif text-3xl">
-          <span x-show="period==='monthly'">$35.990</span>
-          <span x-show="period==='quarterly'" x-cloak>$96.990</span>
-          <span x-show="period==='semester'" x-cloak>$188.990</span>
-        </p>
-        <a :href="buildPlanUrl('plan-4')" class="mt-6 rounded-full bg-olive px-5 py-3 text-center text-sm font-medium text-ivory transition-colors hover:bg-olive-gold">Contratar</a>
-      </article>
-      <!-- 8 clases (destacado) -->
-      <article class="flex flex-col rounded-[1.75rem] border border-olive bg-olive p-7 text-ivory transition-transform hover:-translate-y-1">
+      {% for plan in catalog_plans %}
+      <!-- {{ plan.nombre }} -->
+      <article class="flex flex-col rounded-[1.75rem] border p-7 transition-transform hover:-translate-y-1 {% if plan.destacado %}border-olive bg-olive text-ivory{% else %}border-olive/15 bg-card text-charcoal{% endif %}">
         <div class="flex items-center justify-between">
-          <span class="font-serif text-4xl font-light text-butter">08</span>
-          <span class="rounded-full bg-butter px-3 py-1 text-xs font-medium text-charcoal">Popular</span>
+          <span class="font-serif text-4xl font-light {% if plan.destacado %}text-butter{% else %}text-olive{% endif %}">
+            {{ plan.icono }}
+          </span>
+          {% if plan.destacado %}
+            <span class="rounded-full bg-butter px-3 py-1 text-xs font-medium text-charcoal">Popular</span>
+          {% endif %}
         </div>
-        <h3 class="mt-4 font-serif text-xl">8 clases al mes</h3>
-        <p class="mt-1 text-sm text-ivory/75">2 veces por semana</p>
+        <h3 class="mt-4 font-serif text-xl">{{ plan.nombre }}</h3>
+        <p class="mt-1 text-sm {% if plan.destacado %}text-ivory/75{% else %}text-charcoal/65{% endif %}">{{ plan.frecuencia }}</p>
         <p class="mt-6 font-serif text-3xl">
-          <span x-show="period==='monthly'">$56.990</span>
-          <span x-show="period==='quarterly'" x-cloak>$153.990</span>
-          <span x-show="period==='semester'" x-cloak>$298.990</span>
+          <span x-show="period==='monthly'">${{ plan.precio_mensual_formateado }}</span>
+          <span x-show="period==='quarterly'" x-cloak>${{ plan.precio_trimestral_formateado }}</span>
+          <span x-show="period==='semester'" x-cloak>${{ plan.precio_semestral_formateado }}</span>
         </p>
-        <a :href="buildPlanUrl('plan-8')" class="mt-6 rounded-full bg-butter px-5 py-3 text-center text-sm font-medium text-charcoal transition-colors hover:bg-ivory">Contratar</a>
+        <a :href="buildPlanUrl('{{ plan.slug }}')" class="mt-6 rounded-full px-5 py-3 text-center text-sm font-medium transition-colors {% if plan.destacado %}bg-butter text-charcoal hover:bg-ivory{% else %}bg-olive text-ivory hover:bg-olive-gold{% endif %}">Contratar</a>
       </article>
-      <!-- 12 clases -->
-      <article class="flex flex-col rounded-[1.75rem] border border-olive/15 bg-card p-7 transition-transform hover:-translate-y-1">
-        <span class="font-serif text-4xl font-light text-olive">12</span>
-        <h3 class="mt-4 font-serif text-xl">12 clases al mes</h3>
-        <p class="mt-1 text-sm text-charcoal/65">3 veces por semana</p>
-        <p class="mt-6 font-serif text-3xl">
-          <span x-show="period==='monthly'">$79.990</span>
-          <span x-show="period==='quarterly'" x-cloak>$215.990</span>
-          <span x-show="period==='semester'" x-cloak>$419.990</span>
-        </p>
-        <a :href="buildPlanUrl('plan-12')" class="mt-6 rounded-full bg-olive px-5 py-3 text-center text-sm font-medium text-ivory transition-colors hover:bg-olive-gold">Contratar</a>
-      </article>
-      <!-- 16 clases -->
-      <article class="flex flex-col rounded-[1.75rem] border border-olive/15 bg-card p-7 transition-transform hover:-translate-y-1">
-        <span class="font-serif text-4xl font-light text-olive">16</span>
-        <h3 class="mt-4 font-serif text-xl">16 clases al mes</h3>
-        <p class="mt-1 text-sm text-charcoal/65">4 veces por semana</p>
-        <p class="mt-6 font-serif text-3xl">
-          <span x-show="period==='monthly'">$85.990</span>
-          <span x-show="period==='quarterly'" x-cloak>$232.990</span>
-          <span x-show="period==='semester'" x-cloak>$450.990</span>
-        </p>
-        <a :href="buildPlanUrl('plan-16')" class="mt-6 rounded-full bg-olive px-5 py-3 text-center text-sm font-medium text-ivory transition-colors hover:bg-olive-gold">Contratar</a>
-      </article>
+      {% endfor %}
     </div>
 
     <!-- Clase suelta -->
+    {% if single_class_plan %}
     <div class="mt-4 flex flex-col items-start justify-between gap-5 rounded-[1.75rem] border border-olive/15 bg-beige/40 p-7 md:flex-row md:items-center">
       <div>
         <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clase suelta</p>
-        <h3 class="mt-2 font-serif text-2xl text-charcoal">Entrena sin compromiso de plan</h3>
-        <p class="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70">Perfecta para conocer el estudio o asistir de manera flexible cuando lo necesites.</p>
+        <h3 class="mt-2 font-serif text-2xl text-charcoal">{{ single_class_plan.nombre }}</h3>
+        <p class="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70">{{ single_class_plan.descripcion|default:"Perfecta para conocer el estudio o asistir de manera flexible cuando lo necesites." }}</p>
       </div>
       <div class="flex items-center gap-5">
-        <p class="font-serif text-4xl font-light text-olive">$9.990</p>
+        <p class="font-serif text-4xl font-light text-olive">${{ single_class_plan.precio_mensual_formateado }}</p>
         <a href="{% url 'core:public_single_class_booking' %}" class="rounded-full bg-olive-gold px-6 py-3 text-sm font-medium text-ivory transition-transform hover:-translate-y-0.5">Reservar</a>
       </div>
     </div>
+    {% endif %}
   </section>
 
   <!-- BENEFICIOS -->
@@ -258,75 +230,7 @@
     </div>
   </section>
 
-  <!-- LISTA DE ESPERA -->
-  <section id="espera" class="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-24">
-    <div class="grid overflow-hidden rounded-[2rem] border border-olive/12 lg:grid-cols-[0.9fr_1.1fr]">
-      <div class="bg-olive-gold p-8 text-ivory md:p-10">
-        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Lista de espera</p>
-        <h2 class="mt-5 font-serif text-3xl font-light leading-tight md:text-4xl">Acceso anticipado para nuevas alumnas</h2>
-        <p class="mt-5 leading-relaxed text-ivory/80">Déjanos tus datos y te contactaremos para priorizar tu cupo, avisarte de aperturas de agenda y compartirte novedades del estudio antes que nadie.</p>
-        <ul class="mt-8 space-y-3 text-sm text-ivory/85">
-          <li class="flex items-center gap-3"><span class="h-1.5 w-1.5 rounded-full bg-butter"></span> Registro preferencial en la plataforma</li>
-          <li class="flex items-center gap-3"><span class="h-1.5 w-1.5 rounded-full bg-butter"></span> Prioridad en los bloques de mayor demanda</li>
-          <li class="flex items-center gap-3"><span class="h-1.5 w-1.5 rounded-full bg-butter"></span> Promociones de lanzamiento exclusivas</li>
-        </ul>
-      </div>
-      <div class="bg-card p-8 md:p-10">
-        {% if waitlist_success %}
-          <div class="mb-6 rounded-[1.75rem] border border-olive/12 bg-gradient-to-br from-butter via-card to-ivory p-6 shadow-sm">
-            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Gracias por tu interés</p>
-            <h3 class="mt-3 font-serif text-2xl text-charcoal">Ya recibimos tu solicitud</h3>
-            <p class="mt-3 text-sm leading-relaxed text-charcoal/75">Dentro de pocos días nos comunicaremos contigo para contarte sobre aperturas de cupos, horarios disponibles y próximos pasos para unirte a Cima Pilates.</p>
-            <div class="mt-4 inline-flex rounded-full bg-olive px-4 py-2 text-xs font-medium text-ivory">Nos pondremos en contacto contigo pronto</div>
-          </div>
-        {% endif %}
 
-        {% if lead_form.non_field_errors %}
-          <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {% for error in lead_form.non_field_errors %}
-              <p>{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <form method="post" class="space-y-5">
-          {% csrf_token %}
-          <div>
-            <label for="{{ lead_form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ lead_form.nombre.label }}</label>
-            {{ lead_form.nombre }}
-            {% for error in lead_form.nombre.errors %}
-              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-            {% endfor %}
-          </div>
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label for="{{ lead_form.rut.id_for_label }}" class="text-sm font-medium text-charcoal">{{ lead_form.rut.label }}</label>
-              {{ lead_form.rut }}
-              {% for error in lead_form.rut.errors %}
-                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-              {% endfor %}
-            </div>
-            <div>
-              <label for="{{ lead_form.telefono.id_for_label }}" class="text-sm font-medium text-charcoal">{{ lead_form.telefono.label }}</label>
-              {{ lead_form.telefono }}
-              {% for error in lead_form.telefono.errors %}
-                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-              {% endfor %}
-            </div>
-          </div>
-          <div>
-            <label for="{{ lead_form.email.id_for_label }}" class="text-sm font-medium text-charcoal">{{ lead_form.email.label }}</label>
-            {{ lead_form.email }}
-            {% for error in lead_form.email.errors %}
-              <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-            {% endfor %}
-          </div>
-          <button type="submit" class="btn-primary w-full">Unirme a la lista de espera</button>
-          <p class="text-xs leading-relaxed text-charcoal/55">Tus datos se usan solo para contacto comercial de Cima Pilates SpA y se almacenan de forma confidencial.</p>
-        </form>
-      </div>
-    </div>
-  </section>
 
   <!-- VISÍTANOS -->
   <section id="visita" class="relative overflow-hidden">
@@ -348,15 +252,15 @@
           </div>
           <div class="rounded-[1.5rem] border border-ivory/15 bg-ivory/[0.08] p-6 backdrop-blur-sm">
             <p class="text-xs font-medium uppercase tracking-luxe text-butter">Lunes a viernes</p>
-            <p class="mt-3 text-sm leading-relaxed text-ivory/90">07:10 – 12:00 hrs<span class="mt-1 block">16:00 – 21:00 hrs</span></p>
+            <p class="mt-3 text-sm leading-relaxed text-ivory/90">07:10 – 12:00 hrs<span class="mt-1 block">16:10 – 21:00 hrs</span></p>
           </div>
           <div class="rounded-[1.5rem] border border-ivory/15 bg-ivory/[0.08] p-6 backdrop-blur-sm">
             <p class="text-xs font-medium uppercase tracking-luxe text-butter">Sábado</p>
-            <p class="mt-3 text-sm leading-relaxed text-ivory/90">09:00 – 14:00 hrs</p>
+            <p class="mt-3 text-sm leading-relaxed text-ivory/90">09:10 – 14:00 hrs</p>
           </div>
           <div class="rounded-[1.5rem] border border-ivory/15 bg-ivory/[0.08] p-6 backdrop-blur-sm">
             <p class="text-xs font-medium uppercase tracking-luxe text-butter">Clase suelta</p>
-            <p class="mt-3 font-serif text-2xl text-butter">$9.990</p>
+            <p class="mt-3 font-serif text-2xl text-butter">{% if single_class_plan %}${{ single_class_plan.precio_mensual_formateado }}{% else %}$9.990{% endif %}</p>
           </div>
         </div>
       </div>

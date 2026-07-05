@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db import IntegrityError, models, transaction
 from django.contrib.auth.decorators import login_required
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
+from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -49,73 +50,80 @@ DISPLAY_SCHEDULE_DAYS = 21
 TEACHER_DASHBOARD_DAYS = 21
 BOOKING_OPEN_DELTA = timedelta(days=7)
 DEFAULT_CLASS_CAPACITY = 4
+WEEKDAYS_ES_LIST = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
+def _get_spanish_weekday(date_obj):
+	return WEEKDAYS_ES_LIST[date_obj.weekday()]
+
+def _get_spanish_date_label(date_obj):
+	return f"{_get_spanish_weekday(date_obj)} {date_obj.strftime('%d/%m/%Y')}"
 STUDIO_SLOT_TIMES = {
 	0: (
 		(time(7, 10), time(8, 0)),
-		(time(8, 0), time(9, 0)),
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(16, 0), time(17, 0)),
-		(time(17, 0), time(18, 0)),
-		(time(18, 0), time(19, 0)),
-		(time(19, 0), time(20, 0)),
-		(time(20, 0), time(21, 0)),
+		(time(8, 10), time(9, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(16, 10), time(17, 0)),
+		(time(17, 10), time(18, 0)),
+		(time(18, 10), time(19, 0)),
+		(time(19, 10), time(20, 0)),
+		(time(20, 10), time(21, 0)),
 	),
 	1: (
 		(time(7, 10), time(8, 0)),
-		(time(8, 0), time(9, 0)),
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(16, 0), time(17, 0)),
-		(time(17, 0), time(18, 0)),
-		(time(18, 0), time(19, 0)),
-		(time(19, 0), time(20, 0)),
-		(time(20, 0), time(21, 0)),
+		(time(8, 10), time(9, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(16, 10), time(17, 0)),
+		(time(17, 10), time(18, 0)),
+		(time(18, 10), time(19, 0)),
+		(time(19, 10), time(20, 0)),
+		(time(20, 10), time(21, 0)),
 	),
 	2: (
 		(time(7, 10), time(8, 0)),
-		(time(8, 0), time(9, 0)),
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(16, 0), time(17, 0)),
-		(time(17, 0), time(18, 0)),
-		(time(18, 0), time(19, 0)),
-		(time(19, 0), time(20, 0)),
-		(time(20, 0), time(21, 0)),
+		(time(8, 10), time(9, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(16, 10), time(17, 0)),
+		(time(17, 10), time(18, 0)),
+		(time(18, 10), time(19, 0)),
+		(time(19, 10), time(20, 0)),
+		(time(20, 10), time(21, 0)),
 	),
 	3: (
 		(time(7, 10), time(8, 0)),
-		(time(8, 0), time(9, 0)),
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(16, 0), time(17, 0)),
-		(time(17, 0), time(18, 0)),
-		(time(18, 0), time(19, 0)),
-		(time(19, 0), time(20, 0)),
-		(time(20, 0), time(21, 0)),
+		(time(8, 10), time(9, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(16, 10), time(17, 0)),
+		(time(17, 10), time(18, 0)),
+		(time(18, 10), time(19, 0)),
+		(time(19, 10), time(20, 0)),
+		(time(20, 10), time(21, 0)),
 	),
 	4: (
 		(time(7, 10), time(8, 0)),
-		(time(8, 0), time(9, 0)),
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(16, 0), time(17, 0)),
-		(time(17, 0), time(18, 0)),
-		(time(18, 0), time(19, 0)),
-		(time(19, 0), time(20, 0)),
-		(time(20, 0), time(21, 0)),
+		(time(8, 10), time(9, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(16, 10), time(17, 0)),
+		(time(17, 10), time(18, 0)),
+		(time(18, 10), time(19, 0)),
+		(time(19, 10), time(20, 0)),
+		(time(20, 10), time(21, 0)),
 	),
 	5: (
-		(time(9, 0), time(10, 0)),
-		(time(10, 0), time(11, 0)),
-		(time(11, 0), time(12, 0)),
-		(time(12, 0), time(13, 0)),
-		(time(13, 0), time(14, 0)),
+		(time(9, 10), time(10, 0)),
+		(time(10, 10), time(11, 0)),
+		(time(11, 10), time(12, 0)),
+		(time(12, 10), time(13, 0)),
+		(time(13, 10), time(14, 0)),
 	),
 }
 ACTIVE_SINGLE_CLASS_STATUSES = (
@@ -254,15 +262,37 @@ def _generate_day_slots(day):
 		yield _combine_local_datetime(day, start_time), _combine_local_datetime(day, end_time)
 
 
-def _get_teacher_display_for_session(class_session, teachers=None):
-	teachers = teachers if teachers is not None else list(
-		User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email")
-	)
-	if not teachers:
-		return "Profesora por confirmar"
+def _get_teacher_display_for_session(class_session, teachers=None, monthly_shifts=None):
 	local_start = _get_session_local_datetime(class_session.starts_at)
-	teacher = teachers[(local_start.weekday() + local_start.hour + local_start.minute) % len(teachers)]
-	return teacher.get_full_name() or teacher.email
+	shift_kind = _get_shift_kind_for_local_start(local_start)
+	if shift_kind is None:
+		return "Profesora por confirmar"
+
+	if monthly_shifts is not None:
+		matching_shifts = [
+			s for s in monthly_shifts
+			if s.year == local_start.year and s.month == local_start.month and s.shift_kind == shift_kind
+		]
+		# If the pre-fetched objects do not have select_related teacher, we can resolve from teachers list
+		# but normally they have it. Let's make it robust:
+		if matching_shifts and teachers is not None:
+			teacher_ids = {s.teacher_id for s in matching_shifts}
+			matching_teachers = [t for t in teachers if t.id in teacher_ids]
+			if matching_teachers:
+				return ", ".join(t.get_full_name() or t.email for t in matching_teachers)
+	else:
+		matching_shifts = list(
+			TeacherMonthlyShift.objects.filter(
+				year=local_start.year,
+				month=local_start.month,
+				shift_kind=shift_kind
+			).select_related("teacher")
+		)
+
+	if not matching_shifts:
+		return "Profesora por confirmar"
+
+	return ", ".join((s.teacher.get_full_name() or s.teacher.email) for s in matching_shifts)
 
 
 def _get_shift_kind_for_local_start(local_start):
@@ -281,8 +311,8 @@ def _get_shift_time_range_label(shift_kind):
 	if shift_kind == TeacherShiftKind.AM:
 		return "07:10 - 12:00"
 	if shift_kind == TeacherShiftKind.PM:
-		return "16:00 - 21:00"
-	return "09:00 - 14:00"
+		return "16:10 - 21:00"
+	return "09:00 - 13:50"
 
 
 def _validate_teacher_shift(shift_date, shift_kind):
@@ -291,7 +321,7 @@ def _validate_teacher_shift(shift_date, shift_kind):
 	if shift_date.weekday() == 6:
 		return False, "Los domingos no tienen clases programadas."
 	if shift_date.weekday() == 5 and shift_kind != TeacherShiftKind.SATURDAY:
-		return False, "Los sábados solo admiten el turno Sábado de 09:00 a 14:00."
+		return False, "Los sábados solo admiten el turno Sábado de 09:00 a 13:50."
 	if shift_date.weekday() < 5 and shift_kind == TeacherShiftKind.SATURDAY:
 		return False, "El turno Sábado solo puede usarse en días sábado."
 	if shift_date.weekday() < 5 and shift_kind not in {TeacherShiftKind.AM, TeacherShiftKind.PM}:
@@ -341,7 +371,7 @@ def _get_counted_session_minutes(local_start, local_end):
 	return int((local_end - local_start).total_seconds() // 60)
 
 
-def _build_teacher_month_metrics(teacher, target_month=None):
+def _build_teacher_month_metrics(teacher, target_month=None, prefetch_data=None):
 	target_month = target_month or timezone.localdate()
 	month_start = target_month.replace(day=1)
 	next_month = _add_months(_combine_local_datetime(month_start, time(0, 0)), 1).date()
@@ -354,13 +384,16 @@ def _build_teacher_month_metrics(teacher, target_month=None):
 	else:
 		cutoff_date = month_start - timedelta(days=1)
 
-	selected_shift_kinds = set(
-		TeacherMonthlyShift.objects.filter(
-			teacher=teacher,
-			year=month_start.year,
-			month=month_start.month,
-		).values_list("shift_kind", flat=True)
-	)
+	if prefetch_data is not None:
+		selected_shift_kinds = prefetch_data["shifts"].get(teacher.id, set())
+	else:
+		selected_shift_kinds = set(
+			TeacherMonthlyShift.objects.filter(
+				teacher=teacher,
+				year=month_start.year,
+				month=month_start.month,
+			).values_list("shift_kind", flat=True)
+		)
 	monthly_shift_set = {(month_start.year, month_start.month, kind) for kind in selected_shift_kinds}
 
 	scheduled_shift_day_count = 0
@@ -380,34 +413,75 @@ def _build_teacher_month_metrics(teacher, target_month=None):
 
 	window_start = _to_session_storage_datetime(_combine_local_datetime(month_start, time(0, 0)))
 	window_end = _to_session_storage_datetime(_combine_local_datetime(next_month, time(0, 0)))
+	
 	month_sessions = []
-	for session in ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"):
+	if prefetch_data is not None:
+		sessions_pool = prefetch_data["sessions"]
+	else:
+		sessions_pool = list(ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"))
+
+	for session in sessions_pool:
 		if not _teacher_has_access_to_session(teacher, session, monthly_shift_set=monthly_shift_set):
 			continue
 		local_start = _get_session_local_datetime(session.starts_at)
 		if local_start.date() > cutoff_date:
 			continue
 		month_sessions.append(session)
-	capacity_maps = _get_capacity_maps(month_sessions)
-	student_reservations = capacity_maps["student_reservations"]
 
-	total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions)
+	if prefetch_data is not None:
+		session_ids_set = {s.id for s in month_sessions}
+		student_reservations = [r for r in prefetch_data["reservations"] if r.class_session_id in session_ids_set]
+		single_class_requests = [b for b in prefetch_data["single_bookings"] if b.class_session_id in session_ids_set]
+		
+		student_by_session = defaultdict(list)
+		single_class_by_session = defaultdict(list)
+		for reservation in student_reservations:
+			student_by_session[reservation.class_session_id].append(reservation)
+		for booking in single_class_requests:
+			single_class_by_session[booking.class_session_id].append(booking)
+		total_by_session = defaultdict(int)
+		for session in month_sessions:
+			total_by_session[session.id] = len(student_by_session[session.id]) + len(single_class_by_session[session.id])
+		
+		capacity_maps = {
+			"student_reservations": student_reservations,
+			"student_by_session": student_by_session,
+			"single_class_requests": single_class_requests,
+			"single_class_by_session": single_class_by_session,
+			"total_by_session": total_by_session,
+		}
+	else:
+		capacity_maps = _get_capacity_maps(month_sessions)
+		student_reservations = capacity_maps["student_reservations"]
 
-	adjustment_minutes = int(
-		TeacherHoursAdjustment.objects.filter(
-			teacher=teacher,
-			year=month_start.year,
-			month=month_start.month,
-		).aggregate(models.Sum("minutes_delta")).get("minutes_delta__sum")
-		or 0
-	)
+	if prefetch_data is not None:
+		present_session_ids = {a.class_session_id for a in prefetch_data["attendances"] if a.present and a.class_session_id in session_ids_set}
+		total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions, present_session_ids=present_session_ids)
+	else:
+		total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions)
+
+	if prefetch_data is not None:
+		adjustment_minutes = prefetch_data["adjustments"].get(teacher.id, 0)
+	else:
+		adjustment_minutes = int(
+			TeacherHoursAdjustment.objects.filter(
+				teacher=teacher,
+				year=month_start.year,
+				month=month_start.month,
+			).aggregate(models.Sum("minutes_delta")).get("minutes_delta__sum")
+			or 0
+		)
 	total_effective_minutes += adjustment_minutes
 
-	attendance_marked_count = ClassAttendance.objects.filter(
-		teacher=teacher,
-		class_session__in=month_sessions,
-		present=True,
-	).count()
+	if prefetch_data is not None:
+		attendance_marked_count = sum(1 for a in prefetch_data["attendances"] if a.teacher_id == teacher.id and a.class_session_id in session_ids_set and a.present)
+	else:
+		attendance_marked_count = ClassAttendance.objects.filter(
+			teacher=teacher,
+			class_session__in=month_sessions,
+			present=True,
+		).count()
+
 	unique_student_ids = {reservation.user_id for reservation in student_reservations}
 	return {
 		"month_label": month_start.strftime("%B %Y").capitalize(),
@@ -482,7 +556,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 			schedule_days.append(
 				{
 					"date": day_key,
-					"weekday": local_start.strftime("%A").capitalize(),
+					"weekday": _get_spanish_weekday(local_start),
 					"slots": [],
 				}
 			)
@@ -496,7 +570,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 		schedule_days[-1]["slots"].append(
 			{
 				"session": session,
-				"date_label": local_start.strftime("%A %d/%m/%Y").capitalize(),
+				"date_label": _get_spanish_date_label(local_start),
 				"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
 				"time_key": local_start.strftime("%H:%M"),
 				"date": day_key,
@@ -581,6 +655,10 @@ def _is_valid_schedule_slot(starts_at_local, ends_at_local):
 
 
 def _ensure_schedule_sessions(start_date, total_days):
+	cache_key = f"ensure_sessions_{start_date}_{total_days}_v6"
+	if cache.get(cache_key):
+		return
+
 	expected_sessions = {}
 	for day_offset in range(total_days):
 		target_date = start_date + timedelta(days=day_offset)
@@ -596,6 +674,72 @@ def _ensure_schedule_sessions(start_date, total_days):
 
 	window_start = min(expected_sessions.keys())
 	window_end = max(expected_sessions.keys()) + timedelta(seconds=1)
+
+	# Update existing sessions to match the new times in place, preserving DB data and IDs
+	for session in ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end):
+		local_start = _get_session_local_datetime(session.starts_at)
+		t = local_start.time()
+		day = local_start.date()
+		new_start_local = None
+		new_end_local = None
+		if local_start.weekday() < 5:  # Weekday
+			if t == time(8, 0):
+				new_start_local = _combine_local_datetime(day, time(8, 10))
+				new_end_local = _combine_local_datetime(day, time(9, 0))
+			elif t == time(9, 0):
+				new_start_local = _combine_local_datetime(day, time(9, 10))
+				new_end_local = _combine_local_datetime(day, time(10, 0))
+			elif t == time(10, 0):
+				new_start_local = _combine_local_datetime(day, time(10, 10))
+				new_end_local = _combine_local_datetime(day, time(11, 0))
+			elif t == time(11, 0):
+				new_start_local = _combine_local_datetime(day, time(11, 10))
+				new_end_local = _combine_local_datetime(day, time(12, 0))
+			elif t == time(16, 0):
+				new_start_local = _combine_local_datetime(day, time(16, 10))
+				new_end_local = _combine_local_datetime(day, time(17, 0))
+			elif t == time(17, 0):
+				new_start_local = _combine_local_datetime(day, time(17, 10))
+				new_end_local = _combine_local_datetime(day, time(18, 0))
+			elif t == time(18, 0):
+				new_start_local = _combine_local_datetime(day, time(18, 10))
+				new_end_local = _combine_local_datetime(day, time(19, 0))
+			elif t == time(19, 0):
+				new_start_local = _combine_local_datetime(day, time(19, 10))
+				new_end_local = _combine_local_datetime(day, time(20, 0))
+			elif t == time(20, 0):
+				new_start_local = _combine_local_datetime(day, time(20, 10))
+				new_end_local = _combine_local_datetime(day, time(21, 0))
+		elif local_start.weekday() == 5:  # Saturday
+			if t in {time(9, 0), time(9, 10)}:
+				if t != time(9, 10) or session.ends_at.time() != time(10, 0):
+					new_start_local = _combine_local_datetime(day, time(9, 10))
+					new_end_local = _combine_local_datetime(day, time(10, 0))
+			elif t in {time(10, 0), time(10, 10)}:
+				if t != time(10, 10) or session.ends_at.time() != time(11, 0):
+					new_start_local = _combine_local_datetime(day, time(10, 10))
+					new_end_local = _combine_local_datetime(day, time(11, 0))
+			elif t in {time(11, 0), time(11, 10)}:
+				if t != time(11, 10) or session.ends_at.time() != time(12, 0):
+					new_start_local = _combine_local_datetime(day, time(11, 10))
+					new_end_local = _combine_local_datetime(day, time(12, 0))
+			elif t in {time(12, 0), time(12, 10)}:
+				if t != time(12, 10) or session.ends_at.time() != time(13, 0):
+					new_start_local = _combine_local_datetime(day, time(12, 10))
+					new_end_local = _combine_local_datetime(day, time(13, 0))
+			elif t in {time(13, 0), time(13, 10)}:
+				if t != time(13, 10) or session.ends_at.time() != time(14, 0):
+					new_start_local = _combine_local_datetime(day, time(13, 10))
+					new_end_local = _combine_local_datetime(day, time(14, 0))
+
+		if new_start_local and new_end_local:
+			session.starts_at = _to_session_storage_datetime(new_start_local)
+			session.ends_at = _to_session_storage_datetime(new_end_local)
+			try:
+				session.save(update_fields=["starts_at", "ends_at", "updated_at"])
+			except Exception:
+				pass
+
 	existing_sessions = {
 		_normalize_session_storage_datetime(session.starts_at): session
 		for session in ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end)
@@ -626,6 +770,8 @@ def _ensure_schedule_sessions(start_date, total_days):
 		ClassSession.objects.bulk_create(sessions_to_create, ignore_conflicts=True)
 	if sessions_to_update:
 		ClassSession.objects.bulk_update(sessions_to_update, ["ends_at", "capacidad_maxima"])
+
+	cache.set(cache_key, True, 3600)  # cache for 1 hour
 
 
 def _get_booking_close_delta(class_session):
@@ -700,7 +846,7 @@ def _build_calendar_weeks(schedule_days):
 				current_date,
 				{
 					"date": current_date,
-					"weekday": current_date.strftime("%A").capitalize(),
+					"weekday": _get_spanish_weekday(current_date),
 					"slots": [],
 				},
 			)
@@ -815,13 +961,14 @@ def _log_admin_action(actor, action_type, *, details=None, target_user=None, pla
 	)
 
 
-def _count_teacher_effective_minutes(month_sessions):
-	present_session_ids = set(
-		ClassAttendance.objects.filter(class_session__in=month_sessions, present=True).values_list(
-			"class_session_id",
-			flat=True,
+def _count_teacher_effective_minutes(month_sessions, present_session_ids=None):
+	if present_session_ids is None:
+		present_session_ids = set(
+			ClassAttendance.objects.filter(class_session__in=month_sessions, present=True).values_list(
+				"class_session_id",
+				flat=True,
+			)
 		)
-	)
 	sessions_by_day = defaultdict(list)
 	for session in month_sessions:
 		sessions_by_day[_get_session_local_datetime(session.starts_at).date()].append(session)
@@ -851,6 +998,11 @@ def _build_schedule_context(user, active_plan_request):
 	)
 	capacity_maps = _get_capacity_maps(sessions)
 	teachers = list(User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email"))
+	years_months = set((_get_session_local_datetime(s.starts_at).year, _get_session_local_datetime(s.starts_at).month) for s in sessions)
+	q = models.Q()
+	for y, m in years_months:
+		q |= models.Q(year=y, month=m)
+	monthly_shifts = list(TeacherMonthlyShift.objects.filter(q).select_related("teacher")) if years_months else []
 	reservations = capacity_maps["student_reservations"]
 	user_reservations = [reservation for reservation in reservations if reservation.user_id == user.id]
 	user_reservations_by_session = {reservation.class_session_id: reservation for reservation in user_reservations}
@@ -869,20 +1021,20 @@ def _build_schedule_context(user, active_plan_request):
 	for session in sessions:
 		local_start = _get_session_local_datetime(session.starts_at)
 		local_end = _get_session_local_datetime(session.ends_at)
-		if not _is_valid_schedule_slot(local_start, local_end):
+		is_booked = session.id in user_reservations_by_session
+		if not _is_valid_schedule_slot(local_start, local_end) and not is_booked:
 			continue
 		day_key = local_start.date()
 		if not schedule_days or schedule_days[-1]["date"] != day_key:
 			schedule_days.append(
 				{
 					"date": day_key,
-					"weekday": local_start.strftime("%A").capitalize(),
+					"weekday": _get_spanish_weekday(local_start),
 					"slots": [],
 				}
 			)
 
 		week_start, _ = _get_week_bounds_from_datetime(session.starts_at)
-		is_booked = session.id in user_reservations_by_session
 		can_book, blocked_reason = _plan_allows_booking(active_plan_request, session, now=now)
 		total_reservations = capacity_maps["total_by_session"][session.id]
 		if can_book and not is_booked and total_reservations >= session.capacidad_maxima:
@@ -894,7 +1046,7 @@ def _build_schedule_context(user, active_plan_request):
 				"session": session,
 				"starts_at_local": local_start,
 				"ends_at_local": local_end,
-				"date_label": local_start.strftime("%A %d/%m/%Y").capitalize(),
+				"date_label": _get_spanish_date_label(local_start),
 				"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
 				"reservation_count": total_reservations,
 				"capacity_left": max(session.capacidad_maxima - total_reservations, 0),
@@ -911,7 +1063,7 @@ def _build_schedule_context(user, active_plan_request):
 				"single_class_count": len(capacity_maps["single_class_by_session"][session.id]),
 				"student_count": len(capacity_maps["student_by_session"][session.id]),
 				"time_key": local_start.strftime("%H:%M"),
-				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers),
+				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers, monthly_shifts=monthly_shifts),
 			}
 		)
 
@@ -959,7 +1111,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 			schedule_days.append(
 				{
 					"date": day_key,
-					"weekday": local_start.strftime("%A").capitalize(),
+					"weekday": _get_spanish_weekday(local_start),
 					"slots": [],
 				}
 			)
@@ -974,7 +1126,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 				"session": session,
 				"starts_at_local": local_start,
 				"ends_at_local": local_end,
-				"date_label": local_start.strftime("%A %d/%m/%Y").capitalize(),
+				"date_label": _get_spanish_date_label(local_start),
 				"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
 				"reservation_count": total_reservations,
 				"capacity_left": max(session.capacidad_maxima - total_reservations, 0),
@@ -1008,17 +1160,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 
 
 def home(request):
-	if request.method == "POST":
-		lead_form = LandingLeadForm(request.POST)
-		if lead_form.is_valid():
-			lead_form.save()
-			return redirect(f"{reverse('core:home')}?waitlist=ok#espera")
-	else:
-		lead_form = LandingLeadForm()
-
 	context = {
-		"waitlist_success": request.GET.get("waitlist") == "ok",
-		"lead_form": lead_form,
 		"hours_week": "Lunes a viernes: 07:10 - 12:00 y 16:00 - 21:00",
 		"hours_saturday": "Sábado: 09:00 - 14:00",
 		"location": "Club Cima Pilates, sector oriente de la ciudad",
@@ -1028,12 +1170,8 @@ def home(request):
 			{"src": "img/studio-cta.svg", "title": "Bienvenida", "text": "Una experiencia visual cálida y minimalista."},
 		],
 		"benefits": ["Postura", "Movilidad", "Fuerza", "Control", "Respiración"],
-		"plans": [
-			{"name": "Mensual", "credits": 4, "price": "Precio a confirmar", "accent": "#51604D"},
-			{"name": "Trimestral", "credits": 8, "price": "Precio a confirmar", "accent": "#575627"},
-			{"name": "Semestral", "credits": 12, "price": "Precio a confirmar", "accent": "#CECAA8"},
-			{"name": "Intensivo", "credits": 16, "price": "Precio a confirmar", "accent": "#EDEFAB"},
-		],
+		"catalog_plans": list(PlanCatalog.objects.filter(activo=True, es_clase_suelta=False).order_by("orden", "id")),
+		"single_class_plan": PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first(),
 	}
 	return render(request, "core/home.html", context)
 
@@ -1430,11 +1568,47 @@ def _build_admin_overview_context():
 	total_capacity = sum(session.capacidad_maxima for session in sessions)
 	total_occupied = sum(capacity_maps["total_by_session"][session.id] for session in sessions)
 	present_attendance_count = ClassAttendance.objects.filter(class_session__in=sessions, present=True).count()
+	
+	# Fetch all teachers
 	teachers = list(User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email"))
+	
+	# Month boundaries for prefetching
+	month_start = today.replace(day=1)
+	next_month = _add_months(_combine_local_datetime(month_start, time(0, 0)), 1).date()
+	window_start_month = _to_session_storage_datetime(_combine_local_datetime(month_start, time(0, 0)))
+	window_end_month = _to_session_storage_datetime(_combine_local_datetime(next_month, time(0, 0)))
+	
+	# Pre-fetch monthly data once for ALL teachers
+	prefetch_sessions = list(ClassSession.objects.filter(starts_at__gte=window_start_month, starts_at__lt=window_end_month).order_by("starts_at"))
+	prefetch_reservations = list(ClassReservation.objects.filter(class_session__in=prefetch_sessions).select_related("class_session", "user"))
+	prefetch_single_bookings = list(SingleClassBooking.objects.filter(class_session__in=prefetch_sessions, estado__in=ACTIVE_SINGLE_CLASS_STATUSES).select_related("class_session"))
+	prefetch_attendances = list(ClassAttendance.objects.filter(class_session__in=prefetch_sessions, present=True))
+	
+	# Shifts dictionary mapping teacher_id to set of shift kinds
+	prefetch_shifts = defaultdict(set)
+	for s in TeacherMonthlyShift.objects.filter(year=month_start.year, month=month_start.month):
+		prefetch_shifts[s.teacher_id].add(s.shift_kind)
+		
+	# Adjustments dict mapping teacher_id to sum of minutes_delta
+	prefetch_adjustments = defaultdict(int)
+	adjustments_qs = TeacherHoursAdjustment.objects.filter(year=month_start.year, month=month_start.month).values("teacher_id").annotate(total_delta=models.Sum("minutes_delta"))
+	for adj in adjustments_qs:
+		prefetch_adjustments[adj["teacher_id"]] = adj["total_delta"] or 0
+		
+	# Build the prefetch_data dictionary
+	prefetch_data = {
+		"sessions": prefetch_sessions,
+		"reservations": prefetch_reservations,
+		"single_bookings": prefetch_single_bookings,
+		"attendances": prefetch_attendances,
+		"shifts": prefetch_shifts,
+		"adjustments": prefetch_adjustments,
+	}
+	
 	teacher_month_summaries = [
 		{
 			"teacher": teacher,
-			"metrics": _build_teacher_month_metrics(teacher, target_month=today),
+			"metrics": _build_teacher_month_metrics(teacher, target_month=today, prefetch_data=prefetch_data),
 		}
 		for teacher in teachers
 	]
@@ -1702,6 +1876,12 @@ def admin_schedule_view(request):
 
 	sessions = list(ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at"))
 	capacity_maps = _get_capacity_maps(sessions)
+	teachers = list(User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email"))
+	years_months = set((_get_session_local_datetime(s.starts_at).year, _get_session_local_datetime(s.starts_at).month) for s in sessions)
+	q = models.Q()
+	for y, m in years_months:
+		q |= models.Q(year=y, month=m)
+	monthly_shifts = list(TeacherMonthlyShift.objects.filter(q).select_related("teacher")) if years_months else []
 	attendance_records = list(
 		ClassAttendance.objects.filter(class_session__in=sessions, present=True).select_related("user", "teacher", "class_session")
 	)
@@ -1713,14 +1893,15 @@ def admin_schedule_view(request):
 	for session in sessions:
 		local_start = _get_session_local_datetime(session.starts_at)
 		local_end = _get_session_local_datetime(session.ends_at)
-		if not _is_valid_schedule_slot(local_start, local_end):
+		reservation_count = capacity_maps["total_by_session"][session.id]
+		if not _is_valid_schedule_slot(local_start, local_end) and reservation_count == 0:
 			continue
 		day_key = local_start.date()
 		if not schedule_days or schedule_days[-1]["date"] != day_key:
 			schedule_days.append(
 				{
 					"date": day_key,
-					"weekday": local_start.strftime("%A").capitalize(),
+					"weekday": _get_spanish_weekday(local_start),
 					"slots": [],
 				}
 			)
@@ -1733,7 +1914,7 @@ def admin_schedule_view(request):
 				"session": session,
 				"starts_at_local": local_start,
 				"ends_at_local": local_end,
-				"date_label": local_start.strftime("%A %d/%m/%Y").capitalize(),
+				"date_label": _get_spanish_date_label(local_start),
 				"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
 				"reservation_count": reservation_count,
 				"attendance_count": len(present_records),
@@ -1741,7 +1922,7 @@ def admin_schedule_view(request):
 				"capacity_left": max(total_capacity - reservation_count, 0),
 				"student_names": [reservation.user.get_full_name() or reservation.user.email for reservation in student_reservations],
 				"present_names": [record.user.get_full_name() or record.user.email for record in present_records],
-				"teacher_label": _get_teacher_display_for_session(session),
+				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers, monthly_shifts=monthly_shifts),
 				"is_blocked": session.is_blocked,
 				"blocked_reason": session.blocked_reason or "",
 				"time_key": local_start.strftime("%H:%M"),

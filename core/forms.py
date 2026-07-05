@@ -199,18 +199,42 @@ class SingleClassPublicBookingForm(forms.Form):
 			return cleaned_data
 		email = cleaned_data.get("email")
 		rut = cleaned_data.get("rut")
-		if email and SingleClassBooking.objects.filter(
-			class_session=self.session,
-			email__iexact=email,
-			estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
-		).exists():
-			self.add_error("email", "Ya existe una solicitud activa para esta clase con este correo.")
-		if rut and SingleClassBooking.objects.filter(
-			class_session=self.session,
-			rut=rut,
-			estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
-		).exists():
-			self.add_error("rut", "Ya existe una solicitud activa para esta clase con este RUT.")
+
+		from core.models import PlanCatalog
+		single_class_plan = PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first()
+		is_trial_price = False
+		if single_class_plan and single_class_plan.precio_mensual == 5000:
+			is_trial_price = True
+
+		if email:
+			if is_trial_price:
+				if SingleClassBooking.objects.filter(
+					email__iexact=email,
+					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
+				).exists():
+					self.add_error("email", "La clase de prueba ($5.000) está limitada a 1 por correo electrónico.")
+			else:
+				if SingleClassBooking.objects.filter(
+					class_session=self.session,
+					email__iexact=email,
+					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
+				).exists():
+					self.add_error("email", "Ya existe una solicitud activa para esta clase con este correo.")
+
+		if rut:
+			if is_trial_price:
+				if SingleClassBooking.objects.filter(
+					rut=rut,
+					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
+				).exists():
+					self.add_error("rut", "La clase de prueba ($5.000) está limitada a 1 por RUT.")
+			else:
+				if SingleClassBooking.objects.filter(
+					class_session=self.session,
+					rut=rut,
+					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
+				).exists():
+					self.add_error("rut", "Ya existe una solicitud activa para esta clase con este RUT.")
 		return cleaned_data
 
 	def save(self):

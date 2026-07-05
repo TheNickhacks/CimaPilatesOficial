@@ -51,6 +51,18 @@ class PlanCatalog(models.Model):
 			return 1
 		return max(self.clases_por_mes // 4, 1)
 
+	@property
+	def precio_mensual_formateado(self) -> str:
+		return f"{self.precio_mensual:,}".replace(",", ".")
+
+	@property
+	def precio_trimestral_formateado(self) -> str:
+		return f"{self.precio_trimestral:,}".replace(",", ".")
+
+	@property
+	def precio_semestral_formateado(self) -> str:
+		return f"{self.precio_semestral:,}".replace(",", ".")
+
 
 class PlanRequestStatus(models.TextChoices):
 	PENDING = "pendiente", "Pendiente"
@@ -365,47 +377,47 @@ class AdminActionType(models.TextChoices):
 
 
 class AdminActionLog(models.Model):
-	id = models.BigAutoField(primary_key=True)
-	actor = models.ForeignKey(
-		"accounts.User",
-		on_delete=models.SET_NULL,
-		db_column="actor_id",
-		related_name="admin_actions",
-		null=True,
-		blank=True,
-	)
-	action_type = models.CharField(max_length=50, choices=AdminActionType.choices)
-	target_user = models.ForeignKey(
-		"accounts.User",
-		on_delete=models.SET_NULL,
-		db_column="target_user_id",
-		related_name="targeted_admin_actions",
-		null=True,
-		blank=True,
-	)
-	plan_request = models.ForeignKey(
-		PlanRequest,
-		on_delete=models.SET_NULL,
-		db_column="plan_request_id",
-		related_name="admin_action_logs",
-		null=True,
-		blank=True,
-	)
-	class_session = models.ForeignKey(
-		ClassSession,
-		on_delete=models.SET_NULL,
-		db_column="class_session_id",
-		related_name="admin_action_logs",
-		null=True,
-		blank=True,
-	)
-	details = models.TextField(null=True, blank=True)
-	created_at = models.DateTimeField(auto_now_add=True)
+    id = models.BigAutoField(primary_key=True)
+    actor = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        db_column="actor_id",
+        related_name="admin_actions",
+        null=True,
+        blank=True,
+    )
+    action_type = models.CharField(max_length=50, choices=AdminActionType.choices)
+    target_user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        db_column="target_user_id",
+        related_name="targeted_admin_actions",
+        null=True,
+        blank=True,
+    )
+    plan_request = models.ForeignKey(
+        PlanRequest,
+        on_delete=models.SET_NULL,
+        db_column="plan_request_id",
+        related_name="admin_action_logs",
+        null=True,
+        blank=True,
+    )
+    class_session = models.ForeignKey(
+        ClassSession,
+        on_delete=models.SET_NULL,
+        db_column="class_session_id",
+        related_name="admin_action_logs",
+        null=True,
+        blank=True,
+    )
+    details = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-	class Meta:
-		managed = False
-		db_table = "registro_admin_acciones"
-		ordering = ("-created_at",)
+    class Meta:
+        managed = False
+        db_table = "registro_admin_acciones"
+        ordering = ("-created_at",)
 
-	def __str__(self) -> str:
-		return f"{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}"
+    def __str__(self) -> str:
+        return f"{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}"

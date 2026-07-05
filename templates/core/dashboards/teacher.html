@@ -57,7 +57,7 @@
     <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Disponibilidad</p>
       <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Turno mensual</h2>
-      <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Selecciona el mes y marca los bloques que trabajarás: AM `07:10 - 12:00`, PM `16:00 - 21:00` o Sábado `09:00 - 14:00`. Con esto se habilita el acceso a tus clases y a los perfiles de alumnas.</p>
+      <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Selecciona el mes y marca los bloques que trabajarás: AM `07:10 - 12:00`, PM `16:10 - 21:00` o Sábado `09:10 - 14:00`. Con esto se habilita el acceso a tus clases y a los perfiles de alumnas.</p>
 
       <form method="post" class="mt-6 space-y-4">
         {% csrf_token %}
@@ -96,7 +96,7 @@
             {% if value in teacher_selected_shift_kinds %}
               <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
                 <p class="text-sm font-medium text-charcoal">{{ label }}</p>
-                <p class="mt-1 text-xs text-charcoal/70">{{ value|upper }} · {% if value == 'am' %}07:10 - 12:00{% elif value == 'pm' %}16:00 - 21:00{% else %}09:00 - 14:00{% endif %}</p>
+                <p class="mt-1 text-xs text-charcoal/70">{{ value|upper }} · {% if value == 'am' %}07:10 - 12:00{% elif value == 'pm' %}16:10 - 21:00{% else %}09:10 - 14:00{% endif %}</p>
               </div>
             {% endif %}
           {% endfor %}
