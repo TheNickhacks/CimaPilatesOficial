@@ -374,6 +374,7 @@ class AdminActionType(models.TextChoices):
 	CLASS_UNBLOCKED = "clase_desbloqueada", "Clase desbloqueada"
 	TEACHER_HOURS_ADJUSTED = "horas_profesora_ajustadas", "Horas de profesora ajustadas"
 	BONUS_CLASSES_ADDED = "clases_extra_agregadas", "Clases extra agregadas"
+	CLASS_REMOVED = "clase_removida", "Clase removida por administración"
 
 
 class AdminActionLog(models.Model):

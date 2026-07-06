@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
-from .forms import EmailLoginForm, StudentProfileForm, StudentSignUpForm
+from .forms import EmailLoginForm, StudentProfileForm, StudentSignUpForm, PasswordResetByRutForm
 
 
 def _store_pending_plan_selection(request):
@@ -160,3 +160,20 @@ def profile(request):
 		)
 
 	return render(request, "accounts/profile.html", {"form": form})
+
+
+def reset_password(request):
+	if request.user.is_authenticated:
+		return redirect("core:dashboard_redirect")
+
+	if request.method == "POST":
+		form = PasswordResetByRutForm(request.POST)
+		if form.is_valid():
+			form.save()
+			messages.success(request, "Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.")
+			return redirect("accounts:login")
+	else:
+		form = PasswordResetByRutForm()
+
+	return render(request, "accounts/reset_password.html", {"form": form})
+

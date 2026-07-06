@@ -61,6 +61,7 @@
           blockedReason: el.dataset.blockedReason || '',
           studentNames: el.dataset.studentNames || '',
           presentNames: el.dataset.presentNames || '',
+          attendees: JSON.parse(el.dataset.attendees || '[]'),
         };
         this.blockReason = this.selectedSlot.blockedReason;
         this.detailOpen = true;
@@ -130,6 +131,7 @@
                         data-blocked-reason="{{ slot.blocked_reason }}"
                         data-student-names="{% if slot.student_names %}{{ slot.student_names|join:', ' }}{% endif %}"
                         data-present-names="{% if slot.present_names %}{{ slot.present_names|join:', ' }}{% endif %}"
+                        data-attendees='{{ slot.attendees_json }}'
                         class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_blocked %}border-charcoal bg-charcoal text-ivory{% else %}border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35{% endif %}"
                       >
                         <div class="flex flex-col gap-2">
@@ -195,8 +197,38 @@
         <div class="mt-6 grid gap-4 xl:grid-cols-2">
           <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
             <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agendadas</p>
-            <p class="mt-2 text-sm text-charcoal/70" x-text="selectedSlot ? selectedSlot.studentNames || 'Sin alumnas' : ''"></p>
-            <p class="mt-3 text-xs font-medium uppercase tracking-luxe text-olive-gold">Presentes</p>
+            <div class="mt-3 space-y-3">
+              <template x-if="!selectedSlot || !selectedSlot.attendees || selectedSlot.attendees.length === 0">
+                <p class="text-sm text-charcoal/60">Sin alumnas agendadas.</p>
+              </template>
+              <template x-for="attendee in (selectedSlot ? selectedSlot.attendees : [])" :key="attendee.type + '-' + attendee.id">
+                <div class="flex flex-col gap-2 rounded-xl border border-olive/10 bg-ivory/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="max-w-[60%]">
+                    <p class="text-sm font-medium text-charcoal" x-text="attendee.name"></p>
+                    <p class="text-xs text-charcoal/50 truncate" x-text="attendee.email + (attendee.type === 'single' ? ' · Clase Suelta' : '')" :title="attendee.email"></p>
+                  </div>
+                  <form method="post" action="{% url 'core:admin_remove_attendee' %}" class="flex flex-wrap items-center gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="session_id" :value="selectedSlot.sessionId" />
+                    <input type="hidden" name="attendee_id" :value="attendee.id" />
+                    <input type="hidden" name="attendee_type" :value="attendee.type" />
+                    
+                    <template x-if="attendee.type === 'regular'">
+                      <label class="flex items-center gap-1.5 text-xs text-charcoal/70 cursor-pointer select-none">
+                        <input type="checkbox" name="descontar_clase" value="1" checked class="h-4 w-4 rounded border-olive/30 text-olive focus:ring-olive/20" />
+                        <span>Descontar</span>
+                      </label>
+                    </template>
+                    
+                    <button type="submit" class="rounded-full bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
+                      Quitar
+                    </button>
+                  </form>
+                </div>
+              </template>
+            </div>
+            
+            <p class="mt-5 text-xs font-medium uppercase tracking-luxe text-olive-gold">Presentes</p>
             <p class="mt-2 text-sm text-charcoal/70" x-text="selectedSlot ? selectedSlot.presentNames || 'Aún no registradas' : ''"></p>
           </div>
 

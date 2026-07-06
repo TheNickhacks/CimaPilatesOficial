@@ -647,6 +647,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 		"selected_teacher_session_local_start": _get_session_local_datetime(selected_session.starts_at) if selected_session else None,
 		"selected_teacher_session_local_end": _get_session_local_datetime(selected_session.ends_at) if selected_session else None,
 		"selected_teacher_session_students": selected_attendance,
+		"selected_teacher_session_single_bookings": capacity_maps["single_class_by_session"][selected_session.id] if selected_session else [],
 		"selected_teacher_note": selected_note.note if selected_note else "",
 		"selected_teacher_stats": selected_stats,
 		"teacher_month_metrics": _build_teacher_month_metrics(teacher, target_month=selected_month_start),
@@ -1837,6 +1838,7 @@ def admin_dashboard(request):
 @login_required
 @admin_required
 def admin_schedule_view(request):
+	import json
 	today = timezone.localdate()
 	week_start_date = _get_calendar_navigation_start_date(today)
 	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
@@ -1958,9 +1960,27 @@ def admin_schedule_view(request):
 				}
 			)
 		student_reservations = capacity_maps["student_by_session"][session.id]
+		single_bookings = capacity_maps["single_class_by_session"][session.id]
 		present_records = attendance_by_session[session.id]
 		reservation_count = capacity_maps["total_by_session"][session.id]
 		total_capacity = session.capacidad_maxima or 0
+
+		attendees = []
+		for r in student_reservations:
+			attendees.append({
+				"id": r.id,
+				"type": "regular",
+				"name": r.user.get_full_name() or r.user.email,
+				"email": r.user.email,
+			})
+		for b in single_bookings:
+			attendees.append({
+				"id": b.id,
+				"type": "single",
+				"name": f"{b.nombre} {b.apellido or ''}".strip(),
+				"email": b.email,
+			})
+
 		schedule_days[-1]["slots"].append(
 			{
 				"session": session,
@@ -1972,12 +1992,13 @@ def admin_schedule_view(request):
 				"attendance_count": len(present_records),
 				"attendance_rate": (len(present_records) / reservation_count) if reservation_count else 0,
 				"capacity_left": max(total_capacity - reservation_count, 0),
-				"student_names": [reservation.user.get_full_name() or reservation.user.email for reservation in student_reservations],
+				"student_names": [reservation.user.get_full_name() or reservation.user.email for reservation in student_reservations] + [f"{b.nombre} {b.apellido or ''} (Clase Suelta)".strip() for b in single_bookings],
 				"present_names": [record.user.get_full_name() or record.user.email for record in present_records],
 				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers, monthly_shifts=monthly_shifts),
 				"is_blocked": session.is_blocked,
 				"blocked_reason": session.blocked_reason or "",
 				"time_key": local_start.strftime("%H:%M"),
+				"attendees_json": json.dumps(attendees),
 			}
 		)
 
@@ -2044,3 +2065,81 @@ def admin_plan_pricing_view(request):
 			),
 		},
 	)
+
+
+@login_required
+@admin_required
+def admin_remove_attendee(request):
+	if request.method == "POST":
+		session_id = request.POST.get("session_id")
+		attendee_id = request.POST.get("attendee_id")
+		attendee_type = request.POST.get("attendee_type")
+		descontar_clase = request.POST.get("descontar_clase") == "1"
+
+		if not session_id or not attendee_id or not attendee_type:
+			messages.error(request, "Parámetros insuficientes.")
+			return redirect("core:admin_schedule")
+
+		try:
+			session_id = int(session_id)
+			attendee_id = int(attendee_id)
+		except ValueError:
+			messages.error(request, "Identificadores inválidos.")
+			return redirect("core:admin_schedule")
+
+		try:
+			with transaction.atomic():
+				class_session = ClassSession.objects.select_for_update().get(pk=session_id)
+				if attendee_type == "regular":
+					reservation = ClassReservation.objects.select_for_update().select_related("user").get(pk=attendee_id, class_session=class_session)
+					user = reservation.user
+					starts_at_local = _get_session_local_datetime(class_session.starts_at)
+					starts_at_formatted = starts_at_local.strftime("%d/%m/%Y %H:%M")
+
+					# If descontar_clase is True, they lose the class credit (remains deducted)
+					if descontar_clase:
+						active_plan_request = _get_active_plan_request(user)
+						ClassCreditAdjustment.objects.create(
+							user=user,
+							plan_request=active_plan_request,
+							cantidad=-1,
+							motivo=f"Clase descontada tras ser removido/a de la clase del {starts_at_formatted} por administración."
+						)
+						messages.success(request, f"{user.get_full_name() or user.email} fue removida/o de la clase. La clase fue descontada de su plan.")
+					else:
+						messages.success(request, f"{user.get_full_name() or user.email} fue removida/o de la clase. La clase no fue descontada (crédito devuelto).")
+
+					reservation.delete()
+
+					_log_admin_action(
+						request.user,
+						AdminActionType.CLASS_REMOVED,
+						target_user=user,
+						class_session=class_session,
+						details=f"Removida/o de la clase. Descontar clase: {'Sí' if descontar_clase else 'No'}"
+					)
+
+				elif attendee_type == "single":
+					booking = SingleClassBooking.objects.select_for_update().get(pk=attendee_id, class_session=class_session)
+					name = f"{booking.nombre} {booking.apellido or ''}".strip()
+					booking.delete()
+					messages.success(request, f"Clase suelta de {name} fue removida de la clase.")
+
+					_log_admin_action(
+						request.user,
+						AdminActionType.CLASS_REMOVED,
+						class_session=class_session,
+						details=f"Removida clase suelta de {name}."
+					)
+				else:
+					messages.error(request, "Tipo de asistente desconocido.")
+
+		except ClassSession.DoesNotExist:
+			messages.error(request, "No se encontró la clase seleccionada.")
+		except (ClassReservation.DoesNotExist, SingleClassBooking.DoesNotExist):
+			messages.error(request, "No se encontró la reserva o clase suelta seleccionada.")
+		except Exception as e:
+			messages.error(request, f"Ocurrió un error: {str(e)}")
+
+	return redirect("core:admin_schedule")
+

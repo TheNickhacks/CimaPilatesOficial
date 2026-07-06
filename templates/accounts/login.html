@@ -22,9 +22,14 @@
         {{ form.as_p }}
         <button class="btn-primary w-full" type="submit">Entrar</button>
       </form>
-      <p class="mt-6 text-sm text-charcoal/65">¿No tienes cuenta?
-        <a href="{% url 'accounts:signup_student' %}{% if request.GET.plan %}?plan={{ request.GET.plan|urlencode }}{% if request.GET.period %}&period={{ request.GET.period|urlencode }}{% endif %}{% endif %}" class="font-medium text-olive hover:text-olive-gold">Regístrate aquí</a>
-      </p>
+      <div class="mt-6 space-y-2">
+        <p class="text-sm text-charcoal/65">¿No tienes cuenta?
+          <a href="{% url 'accounts:signup_student' %}{% if request.GET.plan %}?plan={{ request.GET.plan|urlencode }}{% if request.GET.period %}&period={{ request.GET.period|urlencode }}{% endif %}{% endif %}" class="font-medium text-olive hover:text-olive-gold">Regístrate aquí</a>
+        </p>
+        <p class="text-sm text-charcoal/65">¿Olvidaste tu contraseña?
+          <a href="{% url 'accounts:reset_password' %}" class="font-medium text-olive hover:text-olive-gold">Restablécela aquí</a>
+        </p>
+      </div>
     </div>
   </div>
 </section>

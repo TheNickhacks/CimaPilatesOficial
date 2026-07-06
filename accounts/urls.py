@@ -10,4 +10,5 @@ urlpatterns = [
     path("perfil/", views.profile, name="profile"),
     path("ingresar/", views.login_view, name="login"),
     path("salir/", views.logout_view, name="logout"),
+    path("restablecer-contrasena/", views.reset_password, name="reset_password"),
 ]

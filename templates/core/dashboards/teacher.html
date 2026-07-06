@@ -287,6 +287,30 @@
                 {% endif %}
               </div>
             {% endif %}
+
+            {% if selected_teacher_session_single_bookings %}
+              <div class="mt-6 border-t border-olive/10 pt-6">
+                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases sueltas agendadas</p>
+                <div class="mt-4 space-y-4">
+                  {% for booking in selected_teacher_session_single_bookings %}
+                    <div class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5">
+                      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="flex items-start gap-4">
+                          <div class="mt-1 h-5 w-5 flex items-center justify-center rounded-full bg-sand/20 text-sand text-xs font-bold shrink-0">S</div>
+                          <div>
+                            <p class="text-base font-medium text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
+                            <p class="mt-1 text-sm text-charcoal/70">{{ booking.email }}{% if booking.telefono %} · {{ booking.telefono }}{% endif %}</p>
+                            {% if booking.notas %}
+                              <p class="mt-2 text-xs text-charcoal/60 bg-ivory/50 p-2.5 rounded-xl"><strong class="text-olive">Nota de reserva:</strong> {{ booking.notas }}</p>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
           </form>
         </div>
 

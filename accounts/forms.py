@@ -249,3 +249,60 @@ class StudentProfileForm(forms.Form):
 
         self.user.save()
         return self.user
+
+
+class PasswordResetByRutForm(forms.Form):
+    email = forms.EmailField(label="Correo electrónico")
+    rut = forms.CharField(max_length=15, label="RUT")
+    password1 = forms.CharField(label="Nueva contraseña", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirmar nueva contraseña", widget=forms.PasswordInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field_classes = (
+            "mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 "
+            "text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10"
+        )
+        self.fields["email"].widget.attrs.update({"autocomplete": "email", "class": field_classes})
+        self.fields["rut"].widget.attrs.update({"autocomplete": "off", "class": field_classes})
+        self.fields["password1"].widget.attrs.update({"autocomplete": "new-password", "class": field_classes})
+        self.fields["password2"].widget.attrs.update({"autocomplete": "new-password", "class": field_classes})
+
+    def clean_rut(self):
+        rut_value = (self.cleaned_data.get("rut") or "").strip()
+        if not rut_value:
+            raise forms.ValidationError("El RUT es obligatorio.")
+        try:
+            return normalize_rut(rut_value)
+        except ValueError as e:
+            raise forms.ValidationError(str(e))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get("email")
+        rut = cleaned_data.get("rut")
+        password1 = cleaned_data.get("password1")
+        password2 = cleaned_data.get("password2")
+
+        if email and rut:
+            user = User.objects.filter(email__iexact=email.strip().lower(), rut=rut).first()
+            if not user:
+                raise forms.ValidationError("No se encontró ningún usuario con ese correo y RUT.")
+            if not user.is_active:
+                raise forms.ValidationError("La cuenta asociada a este usuario está desactivada.")
+            self.user_cache = user
+
+        if password1 or password2:
+            if password1 != password2:
+                self.add_error("password2", "Las contraseñas no coinciden.")
+            elif len(password1 or "") < 8:
+                self.add_error("password1", "La contraseña debe tener al menos 8 caracteres.")
+
+        return cleaned_data
+
+    def save(self):
+        user = self.user_cache
+        user.set_password(self.cleaned_data["password1"])
+        user.save()
+        return user
+
