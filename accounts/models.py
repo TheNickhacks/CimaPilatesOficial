@@ -99,6 +99,11 @@ class User(models.Model):
 	def get_session_auth_hash(self) -> str:
 		return salted_hmac("accounts.User", self.password_hash).hexdigest()
 
+	def get_session_auth_fallback_hash(self):
+		from django.conf import settings
+		for fallback_secret in getattr(settings, "SECRET_KEY_FALLBACKS", []):
+			yield salted_hmac("accounts.User", self.password_hash, secret=fallback_secret).hexdigest()
+
 	def get_username(self) -> str:
 		return self.email or ""
 
