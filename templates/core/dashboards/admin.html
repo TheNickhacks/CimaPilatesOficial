@@ -12,12 +12,12 @@
     <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Ocupación</p>
       <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_occupancy_percent }}%</p>
-      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_total_occupied }} de {{ dashboard_total_capacity }} cupos ocupados en la ventana visible.</p>
+      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_total_occupied }} de {{ dashboard_total_capacity }} cupos ocupados en el mes.</p>
     </div>
     <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Asistencia</p>
       <p class="mt-3 font-serif text-3xl text-olive">{{ dashboard_attendance_percent }}%</p>
-      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_present_attendance_count }} asistencias marcadas sobre los cupos reservados.</p>
+      <p class="mt-2 text-sm text-charcoal/70">{{ dashboard_present_attendance_count }} de {{ dashboard_total_occupied_past }} asistencias marcadas en clases pasadas.</p>
     </div>
     <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Bloqueadas</p>

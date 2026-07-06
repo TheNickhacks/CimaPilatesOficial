@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="es" class="bg-[#EBEBD9]">
+<html lang="es" class="bg-[#F7F3EA]">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,14 +13,20 @@
       theme: {
         extend: {
           colors: {
-            olive: "#51604D",
-            "olive-gold": "#575627",
-            butter: "#EDEFAB",
-            beige: "#CECAA8",
-            ivory: "#EBEBD9",
-            card: "#F4F3E6",
-            cloud: "#DCDDE1",
+            olive: "#6F7A3E",       // Principal
+            forest: "#3F5132",      // Oscuro
+            sage: "#A9B68A",        // Claro
+            crema: "#F7F3EA",       // Crema
+            white: "#FFFFFF",
+            terracota: "#C98C6A",   // Terracota
+            sand: "#C8B27A",        // Arena
             charcoal: "#212426",
+            // Backwards compatibility mappings:
+            card: "#F7F3EA",
+            ivory: "#F7F3EA",
+            beige: "#A9B68A",
+            butter: "#C8B27A",
+            "olive-gold": "#C8B27A",
           },
           fontFamily: {
             serif: ['Fraunces', 'Georgia', 'serif'],
@@ -38,17 +44,20 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
 </head>
-<body class="bg-ivory text-charcoal antialiased">
-  <header class="sticky top-0 z-50 border-b border-olive/15 bg-ivory/85 backdrop-blur-md" x-data="{ open: false }">
+<body class="bg-crema text-charcoal antialiased">
+  <div class="bg-forest py-2 text-center text-xs font-semibold tracking-widest text-crema uppercase">
+    📢 Agenda tu clase de prueba gratis
+  </div>
+  <header class="sticky top-0 z-50 border-b border-forest/10 bg-crema/90 backdrop-blur-md" x-data="{ open: false }">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
       <a href="{% url 'core:home' %}" class="flex items-center gap-3">
         <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-olive">
           <img src="{% static 'img/logo.png' %}" alt="Logo de Cima Pilates" class="h-11 w-11 object-cover" />
         </span>
-        <span class="font-serif text-lg leading-none tracking-tight text-olive-gold">Cima<span class="text-charcoal"> Pilates</span></span>
+        <span class="font-serif text-2xl uppercase tracking-widest text-forest">Cima<span class="block text-[10px] font-sans tracking-[0.25em] text-sand text-right leading-none">Pilates</span></span>
       </a>
 
-      <nav class="hidden items-center gap-8 text-sm font-medium text-charcoal/80 lg:flex">
+      <nav class="hidden items-center gap-8 text-xs font-semibold uppercase tracking-wider text-charcoal/80 lg:flex">
         <a href="{% url 'core:home' %}#metodo" class="transition-colors hover:text-olive">Método</a>
         <a href="{% url 'core:home' %}#estudio" class="transition-colors hover:text-olive">Estudio</a>
         <a href="{% url 'core:home' %}#planes" class="transition-colors hover:text-olive">Planes</a>
@@ -56,18 +65,18 @@
         <a href="{% url 'core:home' %}#visita" class="transition-colors hover:text-olive">Visítanos</a>
       </nav>
 
-      <nav class="hidden items-center gap-2 lg:flex text-sm">
+      <nav class="hidden items-center gap-3 lg:flex text-xs font-semibold uppercase tracking-wider">
         {% if user.is_authenticated %}
-          <a href="{% url 'accounts:profile' %}" class="rounded-full border border-olive/30 px-5 py-2.5 font-medium text-olive transition-colors hover:bg-olive/5">Perfil</a>
-          <a href="{% url 'core:dashboard_redirect' %}" class="rounded-full border border-olive/30 px-5 py-2.5 font-medium text-olive transition-colors hover:bg-olive/5">Panel</a>
-          <a href="{% url 'accounts:logout' %}" class="rounded-full bg-olive px-5 py-2.5 font-medium text-ivory shadow-sm transition-transform hover:-translate-y-0.5">Salir</a>
+          <a href="{% url 'accounts:profile' %}" class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Perfil</a>
+          <a href="{% url 'core:dashboard_redirect' %}" class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Panel</a>
+          <a href="{% url 'accounts:logout' %}" class="text-forest/70 hover:text-forest transition-colors ml-2 normal-case font-medium">Salir</a>
         {% else %}
-          <a href="{% url 'accounts:login' %}" class="rounded-full border border-olive/30 px-5 py-2.5 font-medium text-olive transition-colors hover:bg-olive/5">Ingresar</a>
-          <a href="{% url 'accounts:signup_student' %}" class="rounded-full bg-olive px-5 py-2.5 font-medium text-ivory shadow-sm transition-transform hover:-translate-y-0.5">Regístrate</a>
+          <a href="{% url 'accounts:login' %}" class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Ingresar</a>
+          <a href="{% url 'accounts:signup_student' %}" class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Regístrate</a>
         {% endif %}
       </nav>
 
-      <button @click="open = !open" class="flex h-10 w-10 items-center justify-center rounded-full border border-olive/30 text-olive lg:hidden" aria-label="Abrir menú">
+      <button @click="open = !open" class="flex h-10 w-10 items-center justify-center rounded-full border border-forest/15 text-forest lg:hidden" aria-label="Abrir menú">
         <div class="space-y-1.5">
           <span class="block h-0.5 w-5 bg-current"></span>
           <span class="block h-0.5 w-5 bg-current"></span>
@@ -110,7 +119,7 @@
 
   {% block content %}{% endblock %}
 
-  <footer class="mt-20 bg-charcoal text-ivory">
+  <footer class="mt-20 bg-forest text-crema border-t border-sand/20">
     <div class="mx-auto max-w-7xl px-5 py-14 lg:px-8">
       <div class="grid gap-10 md:grid-cols-[1.2fr_1fr_1fr]">
         <div>
@@ -120,11 +129,11 @@
             </span>
             <span class="font-serif text-xl">Cima Pilates</span>
           </div>
-          <p class="mt-5 max-w-sm text-sm leading-relaxed text-ivory/65">Estudio boutique de Pilates Reformer enfocado en el bienestar de la mujer. Técnica, calma y progreso en cada clase.</p>
+          <p class="mt-5 max-w-sm text-sm leading-relaxed text-crema/75">Estudio boutique de Pilates Reformer enfocado en el bienestar de la mujer. Técnica, calma y progreso en cada clase.</p>
         </div>
         <div>
-          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Estudio</p>
-          <ul class="mt-4 space-y-2 text-sm text-ivory/75">
+          <p class="text-xs font-medium uppercase tracking-luxe text-sand">Estudio</p>
+          <ul class="mt-4 space-y-2 text-sm text-crema/75">
             <li>Av. Concha y Toro 3346, Local 32, Puente Alto</li>
             <li>Metro Sótero del Río</li>
             <li>Lun a Vie · 07:10–12:00 y 16:10–21:00 hrs</li>
@@ -132,13 +141,13 @@
           </ul>
         </div>
         <div>
-          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Plataforma</p>
-          <ul class="mt-4 space-y-2 text-sm text-ivory/75">
-            <li><a href="{% url 'accounts:login' %}" class="hover:text-butter">Ingresar</a></li>
-            <li><a href="{% url 'accounts:signup_student' %}" class="hover:text-butter">Registrarme</a></li>
-            <li><a href="{% url 'accounts:terms' %}" class="hover:text-butter">Términos y datos</a></li>
-            <li><a href="{% url 'core:home' %}#planes" class="hover:text-butter">Planes y precios</a></li>
-            <li><a href="{% url 'core:home' %}#metodo" class="hover:text-butter">El método</a></li>
+          <p class="text-xs font-medium uppercase tracking-luxe text-sand">Plataforma</p>
+          <ul class="mt-4 space-y-2 text-sm text-crema/75">
+            <li><a href="{% url 'accounts:login' %}" class="hover:text-sand">Ingresar</a></li>
+            <li><a href="{% url 'accounts:signup_student' %}" class="hover:text-sand">Registrarme</a></li>
+            <li><a href="{% url 'accounts:terms' %}" class="hover:text-sand">Términos y datos</a></li>
+            <li><a href="{% url 'core:home' %}#planes" class="hover:text-sand">Planes y precios</a></li>
+            <li><a href="{% url 'core:home' %}#metodo" class="hover:text-sand">El método</a></li>
           </ul>
         </div>
       </div>
