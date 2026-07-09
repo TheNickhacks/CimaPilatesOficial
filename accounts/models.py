@@ -62,7 +62,6 @@ class User(models.Model):
 	is_active = models.BooleanField(default=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	foto_perfil_path = models.CharField(max_length=255, null=True, blank=True)
-	foto_perfil_data = models.BinaryField(null=True, blank=True)
 	foto_perfil_mime_type = models.CharField(max_length=100, null=True, blank=True)
 
 	USERNAME_FIELD = "email"

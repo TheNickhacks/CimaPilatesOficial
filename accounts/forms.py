@@ -240,11 +240,8 @@ class StudentProfileForm(forms.Form):
         foto_perfil = self.files.get("foto_perfil")
         if foto_perfil:
             extension = Path(foto_perfil.name).suffix.lower()
-            file_bytes = foto_perfil.read()
-            foto_perfil.seek(0)
             filename = f"perfiles/{self.user.id}/{uuid4().hex}{extension}"
             self.user.foto_perfil_path = default_storage.save(filename, foto_perfil)
-            self.user.foto_perfil_data = file_bytes
             self.user.foto_perfil_mime_type = getattr(foto_perfil, "content_type", "") or None
 
         self.user.save()

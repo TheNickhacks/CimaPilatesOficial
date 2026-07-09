@@ -542,7 +542,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 	]
 	capacity_maps = _get_capacity_maps(sessions)
 	attendance_records = list(
-		ClassAttendance.objects.filter(class_session__in=sessions).select_related("user", "teacher", "class_session")
+		ClassAttendance.objects.filter(class_session__in=sessions).select_related("user", "teacher")
 	)
 	attendance_by_session_user = {
 		(record.class_session_id, record.user_id): record
@@ -923,13 +923,13 @@ def _get_default_calendar_week_index(calendar_weeks, preferred_session_id=None):
 
 def _get_capacity_maps(sessions):
 	student_reservations = list(
-		ClassReservation.objects.filter(class_session__in=sessions).select_related("class_session", "user")
+		ClassReservation.objects.filter(class_session__in=sessions).select_related("user")
 	)
 	single_class_requests = list(
 		SingleClassBooking.objects.filter(
 			class_session__in=sessions,
 			estado__in=ACTIVE_SINGLE_CLASS_STATUSES,
-		).select_related("class_session")
+		)
 	)
 	student_by_session = defaultdict(list)
 	single_class_by_session = defaultdict(list)
@@ -1589,8 +1589,8 @@ def _build_admin_overview_context():
 	
 	# Pre-fetch monthly data once for ALL teachers and global metrics
 	prefetch_sessions = list(ClassSession.objects.filter(starts_at__gte=window_start_month, starts_at__lt=window_end_month).order_by("starts_at"))
-	prefetch_reservations = list(ClassReservation.objects.filter(class_session__in=prefetch_sessions).select_related("class_session", "user"))
-	prefetch_single_bookings = list(SingleClassBooking.objects.filter(class_session__in=prefetch_sessions, estado__in=ACTIVE_SINGLE_CLASS_STATUSES).select_related("class_session"))
+	prefetch_reservations = list(ClassReservation.objects.filter(class_session__in=prefetch_sessions))
+	prefetch_single_bookings = list(SingleClassBooking.objects.filter(class_session__in=prefetch_sessions, estado__in=ACTIVE_SINGLE_CLASS_STATUSES))
 	prefetch_attendances = list(ClassAttendance.objects.filter(class_session__in=prefetch_sessions, present=True))
 	
 	# Calculate total occupied for the entire month
@@ -1937,7 +1937,7 @@ def admin_schedule_view(request):
 		q |= models.Q(year=y, month=m)
 	monthly_shifts = list(TeacherMonthlyShift.objects.filter(q).select_related("teacher")) if years_months else []
 	attendance_records = list(
-		ClassAttendance.objects.filter(class_session__in=sessions, present=True).select_related("user", "teacher", "class_session")
+		ClassAttendance.objects.filter(class_session__in=sessions, present=True).select_related("user", "teacher")
 	)
 	attendance_by_session = defaultdict(list)
 	for record in attendance_records:
