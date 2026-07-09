@@ -144,7 +144,6 @@ class StudentProfileForm(forms.Form):
         required=False,
         label="Acepto recibir comunicaciones e informacion comercial de Cima Pilates.",
     )
-    foto_perfil = forms.FileField(label="Foto de perfil", required=False)
     password1 = forms.CharField(label="Nueva contrasena", required=False, widget=forms.PasswordInput)
     password2 = forms.CharField(label="Confirmar nueva contrasena", required=False, widget=forms.PasswordInput)
 
@@ -172,12 +171,6 @@ class StudentProfileForm(forms.Form):
             "password2",
         ):
             self.fields[field_name].widget.attrs.update({"class": field_classes})
-        self.fields["foto_perfil"].widget.attrs.update(
-            {
-                "class": "mt-2 block w-full rounded-2xl border border-dashed border-olive/20 bg-ivory px-4 py-3 text-sm text-charcoal",
-                "accept": ".png,.jpg,.jpeg,.webp",
-            }
-        )
         self.fields["consentimiento_marketing"].widget.attrs.update(
             {
                 "class": "mt-1 h-4 w-4 rounded border-olive/30 text-olive focus:ring-olive/20",
@@ -237,12 +230,6 @@ class StudentProfileForm(forms.Form):
         if password:
             self.user.set_password(password)
 
-        foto_perfil = self.files.get("foto_perfil")
-        if foto_perfil:
-            extension = Path(foto_perfil.name).suffix.lower()
-            filename = f"perfiles/{self.user.id}/{uuid4().hex}{extension}"
-            self.user.foto_perfil_path = default_storage.save(filename, foto_perfil)
-            self.user.foto_perfil_mime_type = getattr(foto_perfil, "content_type", "") or None
 
         self.user.save()
         return self.user

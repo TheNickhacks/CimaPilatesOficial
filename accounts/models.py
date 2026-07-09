@@ -61,8 +61,6 @@ class User(models.Model):
 	fecha_solicitud_eliminacion = models.DateTimeField(null=True, blank=True)
 	is_active = models.BooleanField(default=True)
 	created_at = models.DateTimeField(auto_now_add=True)
-	foto_perfil_path = models.CharField(max_length=255, null=True, blank=True)
-	foto_perfil_mime_type = models.CharField(max_length=100, null=True, blank=True)
 
 	USERNAME_FIELD = "email"
 	REQUIRED_FIELDS: list[str] = []
@@ -146,14 +144,6 @@ class User(models.Model):
 			parts = self.nombre_completo.split()
 		return "".join(part[0].upper() for part in parts[:2]) or "CP"
 
-	@property
-	def profile_photo_url(self) -> str | None:
-		if not self.foto_perfil_path:
-			return None
-		try:
-			return default_storage.url(self.foto_perfil_path)
-		except Exception:
-			return None
 
 	def __str__(self) -> str:
 		return f"{self.get_full_name() or self.email} ({self.get_role_display()})"

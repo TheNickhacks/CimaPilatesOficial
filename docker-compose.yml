@@ -12,16 +12,6 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
 
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    environment:
-      NODE_ENV: production
-    restart: unless-stopped
-    expose:
-      - "3000"
-
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -36,7 +26,6 @@ services:
       - certbot_www:/var/www/certbot
     depends_on:
       - backend
-      - frontend
 
 volumes:
   static_volume:

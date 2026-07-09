@@ -1273,7 +1273,6 @@ def student_dashboard(request):
 		"current_plan_expired": current_plan_expired,
 		"upgrade_plan": upgrade_plan,
 		"transfer_details": TRANSFER_DETAILS,
-		"profile_photo_url": request.user.profile_photo_url,
 		"plan_total_limit": _get_plan_total_class_limit(current_plan_request) if current_plan_request is not None else 0,
 		"plan_bonus_count": _get_plan_bonus_class_count(request.user, current_plan_request) if current_plan_request is not None else 0,
 		"plan_used_count": _get_plan_used_class_count(request.user, current_plan_request) if current_plan_request is not None else 0,
@@ -1360,7 +1359,6 @@ def student_schedule(request):
 
 	context = {
 		"active_plan_request": active_plan_request,
-		"profile_photo_url": request.user.profile_photo_url,
 	}
 	context.update(_build_schedule_context(request.user, active_plan_request))
 	return render(request, "core/dashboards/schedule.html", context)
@@ -1557,9 +1555,7 @@ def teacher_dashboard(request):
 				messages.info(request, "No había contenido para guardar en la nota.")
 			return redirect(f"{reverse('core:teacher_dashboard')}?month={selected_month_str}&session={class_session.id}#detalle-clase")
 
-	context = {
-		"profile_photo_url": request.user.profile_photo_url,
-	}
+	context = {}
 	context.update(
 		_build_teacher_schedule_context(
 			request.user,
