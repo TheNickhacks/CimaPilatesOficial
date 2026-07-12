@@ -1183,8 +1183,11 @@ def home(request):
 		],
 		"benefits": ["Postura", "Movilidad", "Fuerza", "Control", "Respiración"],
 		"catalog_plans": list(PlanCatalog.objects.filter(activo=True, es_clase_suelta=False).order_by("orden", "id")),
-		"single_class_plan": PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first(),
 	}
+	single_class_plan = PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first()
+	if single_class_plan and not getattr(single_class_plan, 'descripcion', None):
+		single_class_plan.descripcion = "Perfecta para conocer el estudio o asistir de manera flexible cuando lo necesites."
+	context["single_class_plan"] = single_class_plan
 	return render(request, "core/home.html", context)
 
 

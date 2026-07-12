@@ -15,7 +15,7 @@ def _send_email(subject, to_email, text_template, html_template, context, fail_s
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[to_email],
         reply_to=[settings.REPLY_TO_EMAIL] if settings.REPLY_TO_EMAIL else None,
-        bcc=[settings.BOOKING_NOTIFICATION_EMAIL] if settings.BOOKING_NOTIFICATION_EMAIL else None,
+        bcc=settings.BOOKING_NOTIFICATION_EMAILS if settings.BOOKING_NOTIFICATION_EMAILS else None,
     )
     message.attach_alternative(html_body, "text/html")
     message.send(fail_silently=fail_silently)

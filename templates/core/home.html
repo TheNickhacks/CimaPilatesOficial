@@ -308,8 +308,9 @@
             {% endif %}
           </div>
           <h3 class="mt-4 font-serif text-xl">{{ plan.nombre }}</h3>
-          <p class="mt-1 text-sm {% if plan.destacado %}text-crema/75{% else %}text-charcoal/65{% endif %}">{{
-            plan.frecuencia }}</p>
+          <p class="mt-1 text-sm {% if plan.destacado %}text-crema/75{% else %}text-charcoal/65{% endif %}">
+            {{ plan.frecuencia }}
+          </p>
           <p class="mt-6 font-serif text-3xl">
             <span x-show="period==='monthly'">${{ plan.precio_mensual_formateado }}</span>
             <span x-show="period==='quarterly'" x-cloak>${{ plan.precio_trimestral_formateado }}</span>
@@ -329,9 +330,9 @@
           <span class="inline-flex rounded-full bg-terracota/10 px-3 py-1 text-xs font-medium text-terracota">Clase
             Individual</span>
           <h3 class="mt-3 font-serif text-2xl text-charcoal">{{ single_class_plan.nombre }}</h3>
-          <p class="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70">{{
-            single_class_plan.descripcion|default:"Perfecta para conocer el estudio o asistir de manera flexible cuando
-            lo necesites." }}</p>
+          <p class="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70">
+            {{ single_class_plan.descripcion }}
+          </p>
         </div>
         <div class="flex items-center gap-5">
           <p class="font-serif text-4xl font-light text-forest">${{ single_class_plan.precio_mensual_formateado }}</p>
@@ -391,7 +392,8 @@
 
   <!-- VISÍTANOS -->
   <section id="visita" class="relative overflow-hidden">
-    <div class="absolute inset-0 bg-cover bg-center" style="background-image:url('{% static 'img/cta-studio.png' %}');">
+    <div class="absolute inset-0 bg-cover bg-center"
+      style="background-image:url('{% static 'img/banner_studio.png' %}');"> <!-- TODO: CAMBIAR IMAGEN -->
     </div>
     <div class="absolute inset-0 bg-forest/80"></div>
     <div class="relative mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
@@ -422,8 +424,9 @@
           </div>
           <div class="rounded-[1.5rem] border border-crema/15 bg-white/10 p-6 backdrop-blur-sm">
             <p class="text-xs font-medium uppercase tracking-luxe text-sand">Clase suelta</p>
-            <p class="mt-3 font-serif text-2xl text-sand">{% if single_class_plan %}${{
-              single_class_plan.precio_mensual_formateado }}{% else %}$9.990{% endif %}</p>
+            <p class="mt-3 font-serif text-2xl text-sand">
+              {% if single_class_plan %}${{ single_class_plan.precio_mensual_formateado }}{% else %}$9.990{% endif %}
+            </p>
           </div>
         </div>
       </div>

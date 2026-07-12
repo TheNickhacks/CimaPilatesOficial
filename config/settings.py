@@ -161,7 +161,10 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Cima Pilates <no-reply@cimapilates.cl>")
 REPLY_TO_EMAIL = os.getenv("REPLY_TO_EMAIL", "nnavarrogarrido02@gmail.com")
-BOOKING_NOTIFICATION_EMAIL = os.getenv("BOOKING_NOTIFICATION_EMAIL", "nnavarrogarrido02@gmail.com")
+BOOKING_NOTIFICATION_EMAILS = [
+    email.strip() for email in os.getenv("BOOKING_NOTIFICATION_EMAILS", "nnavarrogarrido02@gmail.com,contacto@cimapilates.cl").split(",")
+    if email.strip()
+]
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
 
 LOGIN_REDIRECT_URL = 'core:dashboard_redirect'
