@@ -1,11 +1,13 @@
 {% load static %}
 <!doctype html>
 <html lang="es" class="bg-[#F7F3EA]">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Cima Pilates{% endblock %}</title>
-  <meta name="description" content="Cima Pilates SpA — Estudio boutique de Pilates Reformer enfocado en el bienestar de la mujer. Av. Concha y Toro 3346, Local 32, Puente Alto." />
+  <meta name="description"
+    content="Cima Pilates SpA — Estudio boutique de Pilates Reformer enfocado en el bienestar de la mujer. Av. Concha y Toro 3346, Local 32, Puente Alto." />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -38,15 +40,18 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet" />
 
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
 </head>
+
 <body class="bg-crema text-charcoal antialiased">
   <div class="bg-forest py-2 text-center text-xs font-semibold tracking-widest text-crema uppercase">
-    📢 Agenda tu clase de prueba gratis
+    📢 Agenda tu clase suelta por solo $5.000 durante julio
   </div>
   <header class="sticky top-0 z-50 border-b border-forest/10 bg-crema/90 backdrop-blur-md" x-data="{ open: false }">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
@@ -54,7 +59,8 @@
         <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-olive">
           <img src="{% static 'img/logo.png' %}" alt="Logo de Cima Pilates" class="h-11 w-11 object-cover" />
         </span>
-        <span class="font-serif text-2xl uppercase tracking-widest text-forest">Cima<span class="block text-[10px] font-sans tracking-[0.25em] text-sand text-right leading-none">Pilates</span></span>
+        <span class="font-serif text-2xl uppercase tracking-widest text-forest">Cima<span
+            class="block text-[10px] font-sans tracking-[0.25em] text-sand text-right leading-none">Pilates</span></span>
       </a>
 
       <nav class="hidden items-center gap-8 text-xs font-semibold uppercase tracking-wider text-charcoal/80 lg:flex">
@@ -67,16 +73,23 @@
 
       <nav class="hidden items-center gap-3 lg:flex text-xs font-semibold uppercase tracking-wider">
         {% if user.is_authenticated %}
-          <a href="{% url 'accounts:profile' %}" class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Perfil</a>
-          <a href="{% url 'core:dashboard_redirect' %}" class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Panel</a>
-          <a href="{% url 'accounts:logout' %}" class="text-forest/70 hover:text-forest transition-colors ml-2 normal-case font-medium">Salir</a>
+        <a href="{% url 'accounts:profile' %}"
+          class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Perfil</a>
+        <a href="{% url 'core:dashboard_redirect' %}"
+          class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Panel</a>
+        <a href="{% url 'accounts:logout' %}"
+          class="text-forest/70 hover:text-forest transition-colors ml-2 normal-case font-medium">Salir</a>
         {% else %}
-          <a href="{% url 'accounts:login' %}" class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Ingresar</a>
-          <a href="{% url 'accounts:signup_student' %}" class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Regístrate</a>
+        <a href="{% url 'accounts:login' %}"
+          class="rounded-full border border-forest/10 bg-white px-5 py-2 text-forest transition-colors hover:bg-crema">Ingresar</a>
+        <a href="{% url 'accounts:signup_student' %}"
+          class="rounded-full bg-forest px-5 py-2 text-white transition-colors hover:bg-terracota">Regístrate</a>
         {% endif %}
       </nav>
 
-      <button @click="open = !open" class="flex h-10 w-10 items-center justify-center rounded-full border border-forest/15 text-forest lg:hidden" aria-label="Abrir menú">
+      <button @click="open = !open"
+        class="flex h-10 w-10 items-center justify-center rounded-full border border-forest/15 text-forest lg:hidden"
+        aria-label="Abrir menú">
         <div class="space-y-1.5">
           <span class="block h-0.5 w-5 bg-current"></span>
           <span class="block h-0.5 w-5 bg-current"></span>
@@ -86,19 +99,29 @@
 
     <div x-show="open" x-cloak class="border-t border-olive/15 bg-ivory px-5 py-4 lg:hidden">
       <nav class="flex flex-col gap-1 text-sm font-medium text-charcoal/80">
-        <a href="{% url 'core:home' %}#metodo" @click="open=false" class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Método</a>
-        <a href="{% url 'core:home' %}#estudio" @click="open=false" class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Estudio</a>
-        <a href="{% url 'core:home' %}#planes" @click="open=false" class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Planes</a>
-        <a href="{% url 'core:home' %}#beneficios" @click="open=false" class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Beneficios</a>
-        <a href="{% url 'core:home' %}#visita" @click="open=false" class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Visítanos</a>
+        <a href="{% url 'core:home' %}#metodo" @click="open=false"
+          class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Método</a>
+        <a href="{% url 'core:home' %}#estudio" @click="open=false"
+          class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Estudio</a>
+        <a href="{% url 'core:home' %}#planes" @click="open=false"
+          class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Planes</a>
+        <a href="{% url 'core:home' %}#beneficios" @click="open=false"
+          class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Beneficios</a>
+        <a href="{% url 'core:home' %}#visita" @click="open=false"
+          class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Visítanos</a>
         <div class="mt-2 flex gap-2">
           {% if user.is_authenticated %}
-            <a href="{% url 'accounts:profile' %}" class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Perfil</a>
-            <a href="{% url 'core:dashboard_redirect' %}" class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Panel</a>
-            <a href="{% url 'accounts:logout' %}" class="flex-1 rounded-full bg-olive px-4 py-2.5 text-center text-ivory">Salir</a>
+          <a href="{% url 'accounts:profile' %}"
+            class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Perfil</a>
+          <a href="{% url 'core:dashboard_redirect' %}"
+            class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Panel</a>
+          <a href="{% url 'accounts:logout' %}"
+            class="flex-1 rounded-full bg-olive px-4 py-2.5 text-center text-ivory">Salir</a>
           {% else %}
-            <a href="{% url 'accounts:login' %}" class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Ingresar</a>
-            <a href="{% url 'accounts:signup_student' %}" class="flex-1 rounded-full bg-olive px-4 py-2.5 text-center text-ivory">Regístrate</a>
+          <a href="{% url 'accounts:login' %}"
+            class="flex-1 rounded-full border border-olive/30 px-4 py-2.5 text-center text-olive">Ingresar</a>
+          <a href="{% url 'accounts:signup_student' %}"
+            class="flex-1 rounded-full bg-olive px-4 py-2.5 text-center text-ivory">Regístrate</a>
           {% endif %}
         </div>
       </nav>
@@ -106,13 +129,13 @@
   </header>
 
   {% if messages %}
-    <div class="mx-auto max-w-7xl px-5 pt-6 lg:px-8">
-      <div class="space-y-2">
-        {% for message in messages %}
-          <p class="rounded-2xl border border-olive/20 bg-card px-4 py-3 text-sm text-charcoal shadow-sm">{{ message }}</p>
-        {% endfor %}
-      </div>
+  <div class="mx-auto max-w-7xl px-5 pt-6 lg:px-8">
+    <div class="space-y-2">
+      {% for message in messages %}
+      <p class="rounded-2xl border border-olive/20 bg-card px-4 py-3 text-sm text-charcoal shadow-sm">{{ message }}</p>
+      {% endfor %}
     </div>
+  </div>
   {% endif %}
 
   {% block fullwidth %}{% endblock %}
@@ -129,7 +152,8 @@
             </span>
             <span class="font-serif text-xl">Cima Pilates</span>
           </div>
-          <p class="mt-5 max-w-sm text-sm leading-relaxed text-crema/75">Estudio boutique de Pilates Reformer enfocado en el bienestar de la mujer. Técnica, calma y progreso en cada clase.</p>
+          <p class="mt-5 max-w-sm text-sm leading-relaxed text-crema/75">Estudio boutique de Pilates Reformer enfocado
+            en el bienestar de la mujer. Técnica, calma y progreso en cada clase.</p>
         </div>
         <div>
           <p class="text-xs font-medium uppercase tracking-luxe text-sand">Estudio</p>
@@ -151,12 +175,18 @@
           </ul>
         </div>
       </div>
-      <div class="mt-12 flex flex-col gap-2 border-t border-ivory/12 pt-6 text-xs text-ivory/50 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        class="mt-12 flex flex-col gap-2 border-t border-ivory/12 pt-6 text-xs text-ivory/50 sm:flex-row sm:items-center sm:justify-between">
         <p>© Cima Pilates SpA. Todos los derechos reservados.</p>
         <p>Puente Alto · Región Metropolitana</p>
       </div>
     </div>
   </footer>
-  <style>[x-cloak]{display:none!important;}</style>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </body>
+
 </html>
