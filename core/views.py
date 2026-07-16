@@ -1726,8 +1726,8 @@ def admin_dashboard(request):
 				cantidad = int(request.POST.get("cantidad") or "0")
 			except (TypeError, ValueError):
 				cantidad = 0
-			if not email or cantidad <= 0:
-				messages.error(request, "Ingresa el correo de la alumna y una cantidad válida.")
+			if not email or cantidad == 0:
+				messages.error(request, "Ingresa el correo de la alumna y una cantidad válida distinta de 0.")
 				return redirect("core:admin_dashboard")
 			student = User.objects.filter(email__iexact=email).first()
 			if student is None:
@@ -1743,14 +1743,20 @@ def admin_dashboard(request):
 				cantidad=cantidad,
 				motivo=motivo,
 			)
+			if cantidad > 0:
+				detail_str = f"+{cantidad} clases"
+				success_msg = f"Se agregaron {cantidad} clases adicionales a la cuenta de la alumna."
+			else:
+				detail_str = f"{cantidad} clases"
+				success_msg = f"Se descontaron {abs(cantidad)} clases de la cuenta de la alumna."
 			_log_admin_action(
 				request.user,
 				AdminActionType.BONUS_CLASSES_ADDED,
 				target_user=student,
 				plan_request=active_plan,
-				details=f"+{adjustment.cantidad} clases",
+				details=detail_str,
 			)
-			messages.success(request, "Se agregaron clases adicionales a la cuenta de la alumna.")
+			messages.success(request, success_msg)
 			return redirect("core:admin_dashboard")
 
 		if action == "adjust_teacher_hours":
@@ -1973,11 +1979,14 @@ def admin_schedule_view(request):
 				"email": r.user.email,
 			})
 		for b in single_bookings:
+			from django.conf import settings
 			attendees.append({
 				"id": b.id,
 				"type": "single",
 				"name": f"{b.nombre} {b.apellido or ''}".strip(),
 				"email": b.email,
+				"estado": b.estado,
+				"comprobante_url": settings.MEDIA_URL + b.comprobante_path if b.comprobante_path else None,
 			})
 
 		schedule_days[-1]["slots"].append(
@@ -2137,6 +2146,57 @@ def admin_remove_attendee(request):
 			messages.error(request, "No se encontró la clase seleccionada.")
 		except (ClassReservation.DoesNotExist, SingleClassBooking.DoesNotExist):
 			messages.error(request, "No se encontró la reserva o clase suelta seleccionada.")
+		except Exception as e:
+			messages.error(request, f"Ocurrió un error: {str(e)}")
+
+	return redirect("core:admin_schedule")
+
+
+@login_required
+@admin_required
+def admin_confirm_single_class_payment(request):
+	if request.method == "POST":
+		session_id = request.POST.get("session_id")
+		booking_id = request.POST.get("booking_id")
+
+		if not session_id or not booking_id:
+			messages.error(request, "Parámetros insuficientes.")
+			return redirect("core:admin_schedule")
+
+		try:
+			session_id = int(session_id)
+			booking_id = int(booking_id)
+		except ValueError:
+			messages.error(request, "Identificadores inválidos.")
+			return redirect("core:admin_schedule")
+
+		try:
+			with transaction.atomic():
+				booking = SingleClassBooking.objects.select_for_update().get(pk=booking_id, class_session_id=session_id)
+				
+				# Send confirmation email
+				from .emails import send_single_class_confirmed_email
+				send_single_class_confirmed_email(
+					booking.email,
+					f"{booking.nombre} {booking.apellido or ''}".strip(),
+					_format_session_label(booking.class_session),
+				)
+				
+				if booking.estado == SingleClassBookingStatus.CONFIRMED:
+					messages.success(request, f"Correo de confirmación reenviado a {booking.nombre}.")
+				else:
+					booking.estado = SingleClassBookingStatus.CONFIRMED
+					booking.save(update_fields=["estado", "updated_at"])
+					
+					_log_admin_action(
+						request.user,
+						AdminActionType.CLASS_BOOKED,
+						class_session=booking.class_session,
+						details=f"Confirmada clase suelta de {booking.nombre} {booking.apellido or ''}.",
+					)
+					messages.success(request, f"Pago aprobado y correo de confirmación enviado a {booking.nombre}.")
+		except SingleClassBooking.DoesNotExist:
+			messages.error(request, "No se encontró la solicitud de clase suelta.")
 		except Exception as e:
 			messages.error(request, f"Ocurrió un error: {str(e)}")
 

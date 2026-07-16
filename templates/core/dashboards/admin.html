@@ -129,8 +129,8 @@
     <div class="space-y-4">
       <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
         <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Ajustes</p>
-        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Agregar clases a una alumna</h2>
-        <p class="mt-3 text-sm text-charcoal/70">Añade clases extra al plan vigente confirmado (ej: +1 clase).</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Agregar o descontar clases a una alumna</h2>
+        <p class="mt-3 text-sm text-charcoal/70">Añade o descuenta clases al plan vigente confirmado (ej: +2 o -3 clases).</p>
 
         <form method="post" class="mt-6 space-y-4">
           {% csrf_token %}
@@ -141,13 +141,13 @@
           </div>
           <div>
             <label class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cantidad</label>
-            <input name="cantidad" type="number" min="1" step="1" required class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="1" />
+            <input name="cantidad" type="number" step="1" required class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="Ej: 2 o -3" />
           </div>
           <div>
             <label class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Motivo</label>
             <textarea name="motivo" rows="3" class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="Validación manual, compensación, etc."></textarea>
           </div>
-          <button type="submit" class="btn-primary w-full">Agregar clases</button>
+          <button type="submit" class="btn-primary w-full">Registrar ajuste</button>
         </form>
       </div>
 
@@ -159,7 +159,7 @@
             {% for adjustment in recent_adjustments %}
               <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
                 <p class="font-medium text-charcoal">{{ adjustment.user.get_full_name|default:adjustment.user.email }}</p>
-                <p class="mt-1 text-xs text-charcoal/70">{{ adjustment.user.email }} · +{{ adjustment.cantidad }} clases</p>
+                <p class="mt-1 text-xs text-charcoal/70">{{ adjustment.user.email }} · {% if adjustment.cantidad > 0 %}+{% endif %}{{ adjustment.cantidad }} clases</p>
                 {% if adjustment.motivo %}
                   <p class="mt-2 text-xs text-charcoal/60">{{ adjustment.motivo }}</p>
                 {% endif %}
@@ -241,8 +241,21 @@
           {% if plan_approval_history %}
             {% for item in plan_approval_history %}
               <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-                <p class="font-medium text-charcoal">{{ item.plan_request.user.get_full_name|default:item.plan_request.user.email }}</p>
-                <p class="mt-1 text-xs text-charcoal/70">{{ item.get_action_type_display }} · {{ item.plan_request.plan.nombre }} · {{ item.plan_request.get_periodo_display }}</p>
+                <p class="font-medium text-charcoal">
+                  {% if item.plan_request %}
+                    {{ item.plan_request.user.get_full_name|default:item.plan_request.user.email }}
+                  {% elif item.target_user %}
+                    {{ item.target_user.get_full_name|default:item.target_user.email }}
+                  {% else %}
+                    {{ item.details|default:"" }}
+                  {% endif %}
+                </p>
+                <p class="mt-1 text-xs text-charcoal/70">
+                  {{ item.get_action_type_display }}
+                  {% if item.plan_request %}
+                    · {{ item.plan_request.plan.nombre }} · {{ item.plan_request.get_periodo_display }}
+                  {% endif %}
+                </p>
                 <p class="mt-1 text-xs text-charcoal/60">{{ item.created_at|date:"d/m/Y H:i" }}{% if item.actor %} · por {{ item.actor.get_full_name|default:item.actor.email }}{% endif %}</p>
               </div>
             {% endfor %}

@@ -84,3 +84,20 @@ def send_class_reservation_confirmation_request_email(email, full_name, class_da
         context,
         fail_silently=fail_silently,
     )
+
+
+def send_single_class_confirmed_email(email, full_name, class_datetime_label, fail_silently=True):
+    context = {
+        "full_name": full_name,
+        "class_datetime_label": class_datetime_label,
+        "site_url": settings.SITE_URL,
+        "reply_to_email": settings.REPLY_TO_EMAIL,
+    }
+    _send_email(
+        "Confirmación de tu clase suelta en Cima Pilates",
+        email,
+        "emails/single_class_confirmed.txt",
+        "emails/single_class_confirmed.html",
+        context,
+        fail_silently=fail_silently,
+    )

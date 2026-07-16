@@ -80,6 +80,7 @@ class PlanBillingPeriod(models.TextChoices):
 class PaymentMethod(models.TextChoices):
 	IN_STUDIO = "presencial", "Pago en estudio"
 	TRANSFER = "transferencia", "Transferencia"
+	LINK = "link_pago", "Link de pago"
 
 
 class PlanRequest(models.Model):
@@ -182,6 +183,9 @@ class SingleClassBooking(models.Model):
 	rut = models.CharField(max_length=15)
 	email = models.EmailField(max_length=100)
 	telefono = models.CharField(max_length=20)
+	edad = models.IntegerField(null=True, blank=True)
+	operaciones_lesiones = models.TextField(null=True, blank=True)
+	condiciones_medicas = models.TextField(null=True, blank=True)
 	metodo_pago = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.IN_STUDIO)
 	notas = models.TextField(null=True, blank=True)
 	comprobante_path = models.CharField(max_length=255, null=True, blank=True)

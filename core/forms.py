@@ -152,10 +152,29 @@ class SingleClassPublicBookingForm(forms.Form):
 	rut = forms.CharField(max_length=15, label="RUT")
 	email = forms.EmailField(max_length=100, label="Correo electronico")
 	telefono = forms.CharField(max_length=20, label="Telefono")
+	edad = forms.IntegerField(
+		label="Edad",
+		required=True,
+		min_value=1,
+		widget=forms.NumberInput(attrs={"placeholder": "Ej: 28"}),
+	)
+	operaciones_lesiones = forms.CharField(
+		label="¿Tienes operaciones o lesiones recientes?",
+		required=False,
+		widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Describe si has tenido cirugías, fracturas, hernias, etc."}),
+	)
+	condiciones_medicas = forms.CharField(
+		label="Condiciones médicas o de salud importantes",
+		required=False,
+		widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Indica si tienes hipertensión, dolores crónicos, embarazo, etc."}),
+	)
 	metodo_pago = forms.ChoiceField(
 		label="Forma de pago",
-		choices=PaymentMethod.choices,
-		initial=PaymentMethod.IN_STUDIO,
+		choices=[
+			("transferencia", "Transferencia bancaria"),
+			("link_pago", "Link de pago (SumUp)"),
+		],
+		initial="transferencia",
 	)
 	notas = forms.CharField(
 		label="Notas adicionales",
@@ -170,8 +189,9 @@ class SingleClassPublicBookingForm(forms.Form):
 			"mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 "
 			"text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10"
 		)
-		for field_name in ("nombre", "apellido", "rut", "email", "telefono", "metodo_pago", "notas"):
+		for field_name in ("nombre", "apellido", "rut", "email", "telefono", "metodo_pago", "notas", "edad", "operaciones_lesiones", "condiciones_medicas"):
 			self.fields[field_name].widget.attrs.update({"class": field_classes})
+		self.fields["metodo_pago"].widget.attrs.update({"x-model": "metodo"})
 		self.fields["comprobante"].widget.attrs.update(
 			{
 				"class": "mt-2 block w-full rounded-2xl border border-dashed border-olive/20 bg-ivory px-4 py-3 text-sm text-charcoal",
@@ -251,6 +271,9 @@ class SingleClassPublicBookingForm(forms.Form):
 			rut=self.cleaned_data["rut"],
 			email=self.cleaned_data["email"],
 			telefono=self.cleaned_data["telefono"].strip(),
+			edad=self.cleaned_data["edad"],
+			operaciones_lesiones=(self.cleaned_data.get("operaciones_lesiones") or "").strip() or None,
+			condiciones_medicas=(self.cleaned_data.get("condiciones_medicas") or "").strip() or None,
 			metodo_pago=self.cleaned_data["metodo_pago"],
 			notas=(self.cleaned_data.get("notas") or "").strip() or None,
 			comprobante_path=comprobante_path,

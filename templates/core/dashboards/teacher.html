@@ -295,14 +295,34 @@
                   {% for booking in selected_teacher_session_single_bookings %}
                     <div class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5">
                       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="flex items-start gap-4">
+                        <div class="flex items-start gap-4 w-full">
                           <div class="mt-1 h-5 w-5 flex items-center justify-center rounded-full bg-sand/20 text-sand text-xs font-bold shrink-0">S</div>
-                          <div>
+                          <div class="w-full">
                             <p class="text-base font-medium text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
                             <p class="mt-1 text-sm text-charcoal/70">{{ booking.email }}{% if booking.telefono %} · {{ booking.telefono }}{% endif %}</p>
-                            {% if booking.notas %}
-                              <p class="mt-2 text-xs text-charcoal/60 bg-ivory/50 p-2.5 rounded-xl"><strong class="text-olive">Nota de reserva:</strong> {{ booking.notas }}</p>
-                            {% endif %}
+                            
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs bg-ivory/40 p-3.5 rounded-xl border border-olive/5">
+                              <div><strong class="text-olive">RUT:</strong> {{ booking.rut }}</div>
+                              <div><strong class="text-olive">Edad:</strong> {{ booking.edad|default:"No especificada" }}</div>
+                              <div><strong class="text-olive">Forma de Pago:</strong> {{ booking.get_metodo_pago_display }}</div>
+                            </div>
+                            
+                            <div class="mt-3 space-y-2 text-xs">
+                              <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
+                                <strong class="text-olive block mb-1">🏥 Operaciones / Lesiones:</strong> 
+                                {{ booking.operaciones_lesiones|default:"Ninguna declarada" }}
+                              </p>
+                              <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
+                                <strong class="text-olive block mb-1">❤️ Condiciones de Salud:</strong> 
+                                {{ booking.condiciones_medicas|default:"Ninguna declarada" }}
+                              </p>
+                              {% if booking.notas %}
+                                <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
+                                  <strong class="text-olive block mb-1">📝 Notas adicionales:</strong> 
+                                  {{ booking.notas }}
+                                </p>
+                              {% endif %}
+                            </div>
                           </div>
                         </div>
                       </div>
