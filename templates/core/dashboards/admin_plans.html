@@ -64,6 +64,12 @@
             <label class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Semestral</label>
             <input name="precio_semestral" type="number" min="0" step="1" value="{{ plan.precio_semestral }}" class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" />
           </div>
+          {% if plan.es_clase_suelta %}
+          <div class="sm:col-span-3">
+            <label class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Link de Pago (SumUp)</label>
+            <input name="link_pago" type="url" value="{{ plan.link_pago|default:'' }}" class="mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="https://pay.sumup.com/b2c/..." />
+          </div>
+          {% endif %}
           <div class="sm:col-span-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="text-sm text-charcoal/70">
               <p>Clase suelta: {% if plan.es_clase_suelta %}Sí{% else %}No{% endif %}</p>

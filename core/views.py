@@ -2049,11 +2049,18 @@ def admin_plan_pricing_view(request):
 				plan.precio_mensual = int(request.POST.get("precio_mensual") or plan.precio_mensual)
 				plan.precio_trimestral = int(request.POST.get("precio_trimestral") or plan.precio_trimestral)
 				plan.precio_semestral = int(request.POST.get("precio_semestral") or plan.precio_semestral)
-				plan.save(update_fields=["precio_mensual", "precio_trimestral", "precio_semestral", "updated_at"])
+				if "link_pago" in request.POST:
+					plan.link_pago = (request.POST.get("link_pago") or "").strip() or None
+				plan.save(update_fields=["precio_mensual", "precio_trimestral", "precio_semestral", "link_pago", "updated_at"])
+				
+				details_log = f"{plan.nombre}: {plan.precio_mensual} / {plan.precio_trimestral} / {plan.precio_semestral}"
+				if plan.link_pago:
+					details_log += f" | Link: {plan.link_pago}"
+				
 				_log_admin_action(
 					request.user,
 					AdminActionType.PLAN_PRICE_UPDATED,
-					details=f"{plan.nombre}: {plan.precio_mensual} / {plan.precio_trimestral} / {plan.precio_semestral}",
+					details=details_log,
 				)
 				messages.success(request, f"Los precios de {plan.nombre} fueron actualizados.")
 		except (PlanCatalog.DoesNotExist, ValueError):

@@ -29,6 +29,7 @@ class PlanCatalog(models.Model):
 	precio_mensual = models.PositiveIntegerField()
 	precio_trimestral = models.PositiveIntegerField()
 	precio_semestral = models.PositiveIntegerField()
+	link_pago = models.CharField(max_length=500, null=True, blank=True)
 	es_clase_suelta = models.BooleanField(default=False)
 	destacado = models.BooleanField(default=False)
 	descripcion = models.CharField(max_length=255, null=True, blank=True)

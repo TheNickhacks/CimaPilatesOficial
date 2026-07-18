@@ -90,8 +90,8 @@
           <div class="flex items-start gap-3">
             {{ form.acepta_terminos }}
             <div class="text-sm leading-relaxed text-charcoal/75">
-              <p>Acepto los <a href="{% url 'accounts:terms' %}" target="_blank" rel="noopener noreferrer" class="font-medium text-olive hover:text-olive-gold">términos y condiciones</a> y autorizo el tratamiento de mis datos personales para la creación y administración de mi cuenta en Cima Pilates.</p>
-              <p class="mt-2 text-xs text-charcoal/60">Este consentimiento se registra junto con la fecha y hora de aceptación.</p>
+              <p>Al crear una cuenta, acepto los <a href="{% url 'accounts:terms' %}" target="_blank" rel="noopener noreferrer" class="font-medium text-olive hover:text-olive-gold">términos y condiciones</a> (los cuales declaro haber leído e informado en su totalidad) y autorizo el tratamiento de mis datos personales para la creación y administración de mi cuenta en Cima Pilates.</p>
+              <p class="mt-2 text-xs text-charcoal/60">Este consentimiento y la lectura de los términos se consideran aceptados y leídos por la usuaria, y se registran junto con la fecha y hora de aceptación.</p>
             </div>
           </div>
           {% for error in form.acepta_terminos.errors %}
