@@ -190,8 +190,9 @@ def _get_plan_valid_until(plan_request):
 		PlanBillingPeriod.QUARTERLY: 3,
 		PlanBillingPeriod.SEMESTER: 6,
 	}
-	created_at = _ensure_aware_datetime(plan_request.created_at)
-	return _add_months(created_at, months_by_period.get(plan_request.periodo, 1))
+	months = months_by_period.get(plan_request.periodo, 1)
+	start_time = _ensure_aware_datetime(plan_request.updated_at or plan_request.created_at)
+	return start_time + timedelta(days=30 * months)
 
 
 def _get_plan_total_class_limit(plan_request):
@@ -383,13 +384,6 @@ def _build_teacher_month_metrics(teacher, target_month=None, prefetch_data=None)
 	month_start = target_month.replace(day=1)
 	next_month = _add_months(_combine_local_datetime(month_start, time(0, 0)), 1).date()
 	month_end = next_month - timedelta(days=1)
-	today = timezone.localdate()
-	if (month_start.year, month_start.month) == (today.year, today.month):
-		cutoff_date = today
-	elif month_start < today.replace(day=1):
-		cutoff_date = month_end
-	else:
-		cutoff_date = month_start - timedelta(days=1)
 
 	if prefetch_data is not None:
 		selected_shift_kinds = prefetch_data["shifts"].get(teacher.id, set())
@@ -430,9 +424,6 @@ def _build_teacher_month_metrics(teacher, target_month=None, prefetch_data=None)
 	for session in sessions_pool:
 		if not _teacher_has_access_to_session(teacher, session, monthly_shift_set=monthly_shift_set):
 			continue
-		local_start = _get_session_local_datetime(session.starts_at)
-		if local_start.date() > cutoff_date:
-			continue
 		month_sessions.append(session)
 
 	if prefetch_data is not None:
@@ -461,11 +452,7 @@ def _build_teacher_month_metrics(teacher, target_month=None, prefetch_data=None)
 		capacity_maps = _get_capacity_maps(month_sessions)
 		student_reservations = capacity_maps["student_reservations"]
 
-	if prefetch_data is not None:
-		present_session_ids = {a.class_session_id for a in prefetch_data["attendances"] if a.present and a.class_session_id in session_ids_set}
-		total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions, present_session_ids=present_session_ids)
-	else:
-		total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions)
+	total_effective_minutes, last_block_skipped_count = _count_teacher_effective_minutes(month_sessions)
 
 	if prefetch_data is not None:
 		adjustment_minutes = prefetch_data["adjustments"].get(teacher.id, 0)
@@ -500,7 +487,7 @@ def _build_teacher_month_metrics(teacher, target_month=None, prefetch_data=None)
 		),
 		"effective_minutes": total_effective_minutes,
 		"effective_hours_label": _format_minutes_label(total_effective_minutes),
-		"effective_cutoff_label": cutoff_date.strftime("%d/%m/%Y") if cutoff_date >= month_start else month_start.strftime("%d/%m/%Y"),
+		"effective_cutoff_label": month_end.strftime("%d/%m/%Y"),
 		"adjustment_minutes": adjustment_minutes,
 		"adjustment_label": _format_minutes_label(abs(adjustment_minutes)) if adjustment_minutes else "",
 		"last_block_skipped_count": last_block_skipped_count,
@@ -969,7 +956,10 @@ def _log_admin_action(actor, action_type, *, details=None, target_user=None, pla
 	)
 
 
-def _count_teacher_effective_minutes(month_sessions, present_session_ids=None):
+def _count_teacher_effective_minutes(month_sessions, present_session_ids=None, now=None):
+	now = now or timezone.now()
+	now_local = _get_session_local_datetime(now)
+
 	if present_session_ids is None:
 		present_session_ids = set(
 			ClassAttendance.objects.filter(class_session__in=month_sessions, present=True).values_list(
@@ -977,6 +967,27 @@ def _count_teacher_effective_minutes(month_sessions, present_session_ids=None):
 				flat=True,
 			)
 		)
+	reservation_session_ids = set(
+		ClassReservation.objects.filter(class_session__in=month_sessions).values_list(
+			"class_session_id",
+			flat=True,
+		)
+	)
+	single_booking_session_ids = set(
+		SingleClassBooking.objects.filter(
+			class_session__in=month_sessions,
+			estado__in=ACTIVE_SINGLE_CLASS_STATUSES,
+		).values_list("class_session_id", flat=True)
+	)
+	has_students_session_ids = present_session_ids | reservation_session_ids | single_booking_session_ids
+
+	worked_session_ids = set()
+	for s in month_sessions:
+		dt_local = _get_session_local_datetime(s.starts_at)
+		if dt_local <= now_local:
+			if s.id in has_students_session_ids:
+				worked_session_ids.add(s.id)
+
 	sessions_by_shift = defaultdict(list)
 	for session in month_sessions:
 		local_start = _get_session_local_datetime(session.starts_at)
@@ -990,11 +1001,66 @@ def _count_teacher_effective_minutes(month_sessions, present_session_ids=None):
 	for (day, shift_kind), shift_sessions in sessions_by_shift.items():
 		shift_sessions.sort(key=lambda s: _get_session_local_datetime(s.starts_at))
 		counted_sessions = shift_sessions[:5]
-		if counted_sessions and counted_sessions[-1].id not in present_session_ids:
+		if counted_sessions and counted_sessions[-1].id not in worked_session_ids:
 			skipped_last_block_count += 1
-		total_minutes += sum(60 for s in counted_sessions if s.id in present_session_ids)
+		total_minutes += sum(60 for s in counted_sessions if s.id in worked_session_ids)
 
 	return total_minutes, skipped_last_block_count
+
+
+@login_required
+def export_teacher_hours_excel(request):
+	import csv
+	from django.http import HttpResponse
+	user = request.user
+	if user.role not in {UserRole.ADMIN, UserRole.TEACHER, UserRole.RECEPTION}:
+		messages.error(request, "No tienes permisos para descargar este reporte.")
+		return redirect("core:dashboard_redirect")
+
+	month_raw = (request.GET.get("month") or "").strip()
+	try:
+		target_month = datetime.strptime(f"{month_raw}-01", "%Y-%m-%d").date().replace(day=1)
+	except ValueError:
+		target_month = timezone.localdate().replace(day=1)
+
+	if user.role == UserRole.TEACHER:
+		teachers = [user]
+	else:
+		teacher_id = request.GET.get("teacher_id")
+		if teacher_id:
+			teachers = list(User.objects.filter(role=UserRole.TEACHER, pk=teacher_id))
+		else:
+			teachers = list(User.objects.filter(role=UserRole.TEACHER).order_by("nombre", "apellido", "email"))
+
+	response = HttpResponse(content_type="text/csv; charset=utf-8")
+	filename = f"reporte_horas_profesoras_{target_month.strftime('%Y_%m')}.csv"
+	response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+	response.write('\ufeff')
+
+	writer = csv.writer(response, delimiter=";")
+	writer.writerow(["Profesora", "Correo", "Año-Mes", "Días Asignados", "Clases con Alumnas", "Minutos Efectivos", "Ajuste Manual (Minutos)", "Total Horas Trabajadas", "Etiqueta Horas"])
+
+	for teacher in teachers:
+		metrics = _build_teacher_month_metrics(teacher, target_month=target_month)
+		total_minutes = metrics["effective_minutes"]
+		hours = total_minutes // 60
+		mins = total_minutes % 60
+		total_hours_str = f"{hours}h {mins}m" if mins else f"{hours}h"
+
+		writer.writerow([
+			teacher.get_full_name() or teacher.email,
+			teacher.email,
+			f"{target_month.year}-{target_month.month:02d}",
+			metrics["scheduled_shift_day_count"],
+			metrics["classes_with_students_count"],
+			metrics["effective_minutes"],
+			metrics["adjustment_minutes"],
+			total_hours_str,
+			metrics["effective_hours_label"],
+		])
+
+	return response
 
 
 def _build_schedule_context(user, active_plan_request):
@@ -1099,7 +1165,7 @@ def _format_session_label(class_session):
 	return f"{local_start.strftime('%d/%m/%Y')} de {local_start.strftime('%H:%M')} a {local_end.strftime('%H:%M')}"
 
 
-def _build_public_single_class_context(selected_session_id=None, booking_form=None):
+def _build_public_single_class_context(selected_session_id=None, booking_form=None, tipo_clase="prueba"):
 	today = timezone.localdate()
 	week_start_date = _get_calendar_navigation_start_date(today)
 	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
@@ -1152,6 +1218,19 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		)
 
 	calendar_weeks = _build_calendar_weeks(schedule_days)
+	initial_data = {"tipo_clase": tipo_clase}
+	if selected_session:
+		initial_data["session_id"] = selected_session.id
+
+	is_trial = (tipo_clase == "prueba")
+	class_title = "Clase de Prueba" if is_trial else "Clase Suelta"
+	class_price = 5000 if is_trial else 9990
+	class_description = (
+		"Primera clase de prueba para conocer nuestro estudio ($5.000, 1 por persona)."
+		if is_trial
+		else "Clase individual suelta para asistir cuando quieras ($9.990)."
+	)
+
 	return {
 		"schedule_days": schedule_days,
 		"calendar_weeks": calendar_weeks,
@@ -1163,8 +1242,12 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		"selected_single_class_session_local_start": _get_session_local_datetime(selected_session.starts_at) if selected_session else None,
 		"selected_single_class_session_local_end": _get_session_local_datetime(selected_session.ends_at) if selected_session else None,
 		"single_class_booking_form": booking_form or SingleClassPublicBookingForm(
-			initial={"session_id": selected_session.id} if selected_session else None
+			initial=initial_data
 		),
+		"tipo_clase": tipo_clase,
+		"class_title": class_title,
+		"class_price": class_price,
+		"class_description": class_description,
 		"single_class_plan": PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first(),
 		"transfer_details": TRANSFER_DETAILS,
 		"open_single_class_form": selected_session is not None,
@@ -1374,16 +1457,21 @@ def public_single_class_booking(request):
 	except (TypeError, ValueError):
 		selected_session_id = None
 
+	tipo_clase = request.GET.get("tipo", "prueba").strip().lower()
+	if tipo_clase not in {"prueba", "suelta"}:
+		tipo_clase = "prueba"
+
 	if request.method == "POST":
 		booking_form = SingleClassPublicBookingForm(request.POST, request.FILES)
 		if booking_form.is_valid():
+			tipo_clase = booking_form.cleaned_data.get("tipo_clase") or tipo_clase
 			try:
 				with transaction.atomic():
 					class_session = ClassSession.objects.select_for_update().get(pk=booking_form.cleaned_data["session_id"])
 					can_book, blocked_reason = _booking_window_allows_session(class_session)
 					if not can_book:
 						messages.error(request, blocked_reason)
-						return redirect("core:public_single_class_booking")
+						return redirect(f"{reverse('core:public_single_class_booking')}?tipo={tipo_clase}")
 
 					total_reservations = (
 						ClassReservation.objects.filter(class_session=class_session).count()
@@ -1394,20 +1482,23 @@ def public_single_class_booking(request):
 					)
 					if total_reservations >= class_session.capacidad_maxima:
 						messages.error(request, "Este bloque ya completo sus 4 cupos disponibles.")
-						return redirect("core:public_single_class_booking")
+						return redirect(f"{reverse('core:public_single_class_booking')}?tipo={tipo_clase}")
 
 					single_class_booking = booking_form.save()
+					class_name = "Clase de Prueba ($5.000)" if single_class_booking.tipo_clase == "prueba" else "Clase Suelta ($9.990)"
 					send_single_class_request_received_email(
 						single_class_booking.email,
 						f"{single_class_booking.nombre} {single_class_booking.apellido or ''}".strip(),
 						_format_session_label(class_session),
 						single_class_booking.get_metodo_pago_display(),
+						class_type_name=class_name,
 					)
+					msg_type = "clase de prueba ($5.000)" if single_class_booking.tipo_clase == "prueba" else "clase suelta ($9.990)"
 					messages.success(
 						request,
-						"Tu solicitud de clase suelta fue recibida. Te enviaremos un correo con la confirmacion de recepcion.",
+						f"Tu solicitud de {msg_type} fue recibida. Te enviaremos un correo con la confirmacion de recepcion.",
 					)
-					return redirect(f"{reverse('core:public_single_class_booking')}?single_class=ok")
+					return redirect(f"{reverse('core:public_single_class_booking')}?tipo={tipo_clase}&single_class=ok")
 			except IntegrityError:
 				messages.error(request, "No fue posible registrar la solicitud. Intenta nuevamente.")
 		selected_session_id = booking_form.data.get("session_id")
@@ -1415,13 +1506,15 @@ def public_single_class_booking(request):
 			selected_session_id = int(selected_session_id) if selected_session_id else None
 		except (TypeError, ValueError):
 			selected_session_id = None
+		if booking_form.data.get("tipo_clase") in {"prueba", "suelta"}:
+			tipo_clase = booking_form.data.get("tipo_clase")
 	else:
 		booking_form = None
 
 	context = {
 		"single_class_success": request.GET.get("single_class") == "ok",
 	}
-	context.update(_build_public_single_class_context(selected_session_id, booking_form=booking_form))
+	context.update(_build_public_single_class_context(selected_session_id, booking_form=booking_form, tipo_clase=tipo_clase))
 	return render(request, "core/public_single_class_booking.html", context)
 
 
@@ -1568,8 +1661,8 @@ def teacher_dashboard(request):
 	)
 	return render(request, "core/dashboards/teacher.html", context)
 
-def _build_admin_overview_context():
-	today = timezone.localdate()
+def _build_admin_overview_context(selected_month=None):
+	today = selected_month or timezone.localdate()
 	week_start_date = _get_calendar_navigation_start_date(today)
 	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
 	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
@@ -1659,10 +1752,66 @@ def _build_admin_overview_context():
 	teacher_month_summaries = [
 		{
 			"teacher": teacher,
-			"metrics": _build_teacher_month_metrics(teacher, target_month=today, prefetch_data=prefetch_data),
+			"metrics": _build_teacher_month_metrics(teacher, target_month=selected_month, prefetch_data=prefetch_data),
 		}
 		for teacher in teachers
 	]
+	# Financial & KPI Metrics for current month
+	confirmed_plans_month = list(
+		PlanRequest.objects.filter(
+			estado=PlanRequestStatus.CONFIRMED,
+			updated_at__year=month_start.year,
+			updated_at__month=month_start.month,
+		).select_related("plan", "user")
+	)
+	confirmed_single_bookings_month = list(
+		SingleClassBooking.objects.filter(
+			estado=SingleClassBookingStatus.CONFIRMED,
+			created_at__year=month_start.year,
+			created_at__month=month_start.month,
+		)
+	)
+
+	trial_classes_month = [b for b in confirmed_single_bookings_month if getattr(b, "tipo_clase", "prueba") == "prueba"]
+	suelta_classes_month = [b for b in confirmed_single_bookings_month if getattr(b, "tipo_clase", "prueba") == "suelta"]
+
+	plans_revenue = sum(
+		p.plan.precio_mensual if p.periodo == PlanBillingPeriod.MONTHLY
+		else (p.plan.precio_trimestral if p.periodo == PlanBillingPeriod.QUARTERLY else p.plan.precio_semestral)
+		for p in confirmed_plans_month
+	)
+	trial_revenue = len(trial_classes_month) * 5000
+	suelta_revenue = len(suelta_classes_month) * 9990
+	total_revenue_month = plans_revenue + trial_revenue + suelta_revenue
+
+	# Weekly Stacked Bar Chart calculation (4 weeks in month)
+	weekly_chart_data = []
+	month_max_days = monthrange(month_start.year, month_start.month)[1]
+	for week_num in range(1, 5):
+		w_start_day = (week_num - 1) * 7 + 1
+		w_end_day = week_num * 7 if week_num < 4 else month_max_days
+
+		w_plans = [p for p in confirmed_plans_month if w_start_day <= p.updated_at.day <= w_end_day]
+		w_trial = [b for b in trial_classes_month if w_start_day <= b.created_at.day <= w_end_day]
+		w_suelta = [b for b in suelta_classes_month if w_start_day <= b.created_at.day <= w_end_day]
+
+		p_count = len(w_plans)
+		t_count = len(w_trial)
+		s_count = len(w_suelta)
+		w_total = p_count + t_count + s_count
+
+		weekly_chart_data.append({
+			"label": f"Semana {week_num}",
+			"days_range": f"{w_start_day:02d}-{w_end_day:02d}/{month_start.month:02d}",
+			"plans_count": p_count,
+			"trial_count": t_count,
+			"suelta_count": s_count,
+			"total_count": w_total,
+			"plans_percent": round((p_count / w_total * 100)) if w_total else 0,
+			"trial_percent": round((t_count / w_total * 100)) if w_total else 0,
+			"suelta_percent": round((s_count / w_total * 100)) if w_total else 0,
+		})
+
 	return {
 		"dashboard_session_count": len(prefetch_sessions),
 		"dashboard_total_capacity": total_capacity,
@@ -1676,6 +1825,18 @@ def _build_admin_overview_context():
 		"dashboard_blocked_session_count": sum(1 for session in prefetch_sessions if session.is_blocked),
 		"dashboard_teacher_summary_count": len(teacher_month_summaries),
 		"teacher_month_summaries": teacher_month_summaries,
+		"dashboard_confirmed_plans_count": len(confirmed_plans_month),
+		"dashboard_trial_classes_count": len(trial_classes_month),
+		"dashboard_suelta_classes_count": len(suelta_classes_month),
+		"dashboard_plans_revenue": plans_revenue,
+		"dashboard_plans_revenue_formatted": f"{int(plans_revenue):,}".replace(",", "."),
+		"dashboard_trial_revenue": trial_revenue,
+		"dashboard_trial_revenue_formatted": f"{int(trial_revenue):,}".replace(",", "."),
+		"dashboard_suelta_revenue": suelta_revenue,
+		"dashboard_suelta_revenue_formatted": f"{int(suelta_revenue):,}".replace(",", "."),
+		"dashboard_total_revenue_month": total_revenue_month,
+		"dashboard_total_revenue_month_formatted": f"{int(total_revenue_month):,}".replace(",", "."),
+		"weekly_chart_data": weekly_chart_data,
 	}
 @login_required
 @admin_required
@@ -1792,7 +1953,29 @@ def admin_dashboard(request):
 				target_user=teacher,
 				details=f"{adjustment.year}-{adjustment.month:02d}: {adjustment.minutes_delta} min",
 			)
-			messages.success(request, "El ajuste de horas fue registrado.")
+		if action == "cancel_student_plan":
+			email = (request.POST.get("student_email") or "").strip().lower()
+			if not email:
+				messages.error(request, "Ingresa el correo de la alumna.")
+				return redirect("core:admin_dashboard")
+			student = User.objects.filter(email__iexact=email).first()
+			if student is None:
+				messages.error(request, "No encontramos una alumna con ese correo.")
+				return redirect("core:admin_dashboard")
+			active_plan = _get_active_plan_request(student)
+			if active_plan is None:
+				messages.error(request, "La alumna no tiene un plan activo para cancelar.")
+				return redirect("core:admin_dashboard")
+			active_plan.estado = PlanRequestStatus.REJECTED
+			active_plan.save(update_fields=["estado", "updated_at"])
+			_log_admin_action(
+				request.user,
+				AdminActionType.PLAN_REJECTED,
+				target_user=student,
+				plan_request=active_plan,
+				details=f"Plan cancelado manualmente por administración para {student.email}",
+			)
+			messages.success(request, f"El plan de {student.get_full_name() or student.email} fue cancelado exitosamente.")
 			return redirect("core:admin_dashboard")
 
 	pending_plan_requests = list(
@@ -1827,7 +2010,61 @@ def admin_dashboard(request):
 		.select_related("actor", "target_user", "plan_request")
 		.order_by("-created_at")[:12]
 	)
+	student_search_query = (request.GET.get("student_search") or "").strip()
+	approved_students_search_results = []
+	if student_search_query:
+		matching_users = User.objects.filter(
+			models.Q(nombre__icontains=student_search_query) |
+			models.Q(apellido__icontains=student_search_query) |
+			models.Q(email__icontains=student_search_query) |
+			models.Q(rut__icontains=student_search_query)
+		)
+		confirmed_requests = list(
+			PlanRequest.objects.filter(user__in=matching_users, estado=PlanRequestStatus.CONFIRMED)
+			.select_related("user", "plan")
+			.order_by("-updated_at")[:20]
+		)
+		logs_by_plan = {
+			log.plan_request_id: log.actor
+			for log in AdminActionLog.objects.filter(
+				action_type=AdminActionType.PLAN_CONFIRMED,
+				plan_request__in=confirmed_requests
+			).select_related("actor")
+		}
+		now = timezone.now()
+		for req in confirmed_requests:
+			approver = logs_by_plan.get(req.id)
+			approver_name = (approver.get_full_name() or approver.email) if approver else "Administración"
+			valid_until = _get_plan_valid_until(req)
+			total_limit = _get_plan_total_class_limit(req)
+			bonus_count = _get_plan_bonus_class_count(req.user, req)
+			used_count = _get_plan_used_class_count(req.user, req)
+			total_capacity = total_limit + bonus_count
+			remaining_count = max(total_capacity - used_count, 0)
+			is_expired = valid_until <= now
+
+			approved_students_search_results.append({
+				"student": req.user,
+				"plan": req.plan,
+				"periodo_display": req.get_periodo_display(),
+				"approved_at": req.updated_at,
+				"approver": approver_name,
+				"valid_until": valid_until,
+				"total_capacity": total_capacity,
+				"used_count": used_count,
+				"remaining_count": remaining_count,
+				"is_expired": is_expired,
+			})
+
+	selected_month_raw = request.GET.get("month") or request.POST.get("month")
+	selected_month_raw = (selected_month_raw or "").strip()
+	try:
+		selected_month = datetime.strptime(f"{selected_month_raw}-01", "%Y-%m-%d").date().replace(day=1)
+	except ValueError:
+		selected_month = timezone.localdate().replace(day=1)
+
 	context = {
+		"selected_month": selected_month,
 		"pending_plan_requests": pending_plan_requests,
 		"recent_confirmed_plans": recent_confirmed_plans,
 		"recent_adjustments": recent_adjustments,
@@ -1835,8 +2072,10 @@ def admin_dashboard(request):
 		"recent_teacher_hour_adjustments": recent_teacher_hour_adjustments,
 		"recent_admin_actions": recent_admin_actions,
 		"plan_approval_history": plan_approval_history,
+		"student_search_query": student_search_query,
+		"approved_students_search_results": approved_students_search_results,
 	}
-	context.update(_build_admin_overview_context())
+	context.update(_build_admin_overview_context(selected_month=selected_month))
 	return render(request, "core/dashboards/admin.html", context)
 
 
@@ -1870,8 +2109,12 @@ def admin_schedule_view(request):
 				with transaction.atomic():
 					class_session = ClassSession.objects.select_for_update().get(pk=session_id)
 					if class_session.is_blocked:
-						messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
-						return redirect("core:admin_schedule")
+						active_plan = _get_active_plan_request(student)
+						if active_plan is None:
+							messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
+							return redirect("core:admin_schedule")
+						else:
+							nota = f"[Agendada en clase bloqueada con plan vendido] {nota or ''}".strip()
 					if ClassReservation.objects.filter(class_session=class_session, user=student).exists():
 						messages.info(request, "La usuaria ya está agendada en esta clase.")
 						return redirect("core:admin_schedule")
@@ -1979,14 +2222,15 @@ def admin_schedule_view(request):
 				"email": r.user.email,
 			})
 		for b in single_bookings:
-			from django.conf import settings
 			attendees.append({
 				"id": b.id,
 				"type": "single",
 				"name": f"{b.nombre} {b.apellido or ''}".strip(),
 				"email": b.email,
 				"estado": b.estado,
-				"comprobante_url": settings.MEDIA_URL + b.comprobante_path if b.comprobante_path else None,
+				"tipo_clase": getattr(b, "tipo_clase", "prueba"),
+				"tipo_label": "Clase de Prueba ($5.000)" if getattr(b, "tipo_clase", "prueba") == "prueba" else "Clase Suelta ($9.990)",
+				"comprobante_url": b.comprobante_url,
 			})
 
 		schedule_days[-1]["slots"].append(
@@ -2183,10 +2427,12 @@ def admin_confirm_single_class_payment(request):
 				
 				# Send confirmation email
 				from .emails import send_single_class_confirmed_email
+				class_type_name = "Clase de Prueba ($5.000)" if getattr(booking, "tipo_clase", "prueba") == "prueba" else "Clase Suelta ($9.990)"
 				send_single_class_confirmed_email(
 					booking.email,
 					f"{booking.nombre} {booking.apellido or ''}".strip(),
 					_format_session_label(booking.class_session),
+					class_type_name=class_type_name,
 				)
 				
 				if booking.estado == SingleClassBookingStatus.CONFIRMED:

@@ -1,20 +1,24 @@
 {% extends 'base.html' %}
-{% block title %}Clase Suelta | Cima Pilates{% endblock %}
+{% block title %}{{ class_title }} | Cima Pilates{% endblock %}
 {% block content %}
 <section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
   <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
     <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
       <div>
-        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Clase suelta</p>
-        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Reserva tu clase sin necesidad de iniciar sesion</h1>
-        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">Selecciona un bloque disponible, completa tus datos personales y elige la forma de pago. La solicitud queda registrada y te enviaremos un correo confirmando su recepcion.</p>
-      </div>
-      {% if single_class_plan %}
-        <div class="rounded-[1.5rem] bg-ivory/10 px-6 py-5 text-right">
-          <p class="text-xs font-medium uppercase tracking-luxe text-butter">Valor clase suelta</p>
-          <p class="mt-2 font-serif text-4xl text-ivory">${{ single_class_plan.precio_mensual_formateado }}</p>
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-medium uppercase tracking-luxe text-butter">{{ class_title }}</span>
+          <div class="inline-flex rounded-full bg-ivory/15 p-1 text-xs">
+            <a href="?tipo=prueba{% if selected_single_class_session %}&session={{ selected_single_class_session.id }}{% endif %}" class="rounded-full px-3 py-1 transition-colors {% if tipo_clase == 'prueba' %}bg-butter text-charcoal font-semibold{% else %}text-ivory/80 hover:text-ivory{% endif %}">Clase Prueba $5.000</a>
+            <a href="?tipo=suelta{% if selected_single_class_session %}&session={{ selected_single_class_session.id }}{% endif %}" class="rounded-full px-3 py-1 transition-colors {% if tipo_clase == 'suelta' %}bg-butter text-charcoal font-semibold{% else %}text-ivory/80 hover:text-ivory{% endif %}">Clase Suelta $9.990</a>
+          </div>
         </div>
-      {% endif %}
+        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">{{ class_title }}</h1>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">{{ class_description }} Selecciona un bloque disponible, completa tus datos personales y adjunta tu comprobante de pago para agilizar la validación.</p>
+      </div>
+      <div class="rounded-[1.5rem] bg-ivory/10 px-6 py-5 text-right shrink-0">
+        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Valor {{ class_title }}</p>
+        <p class="mt-2 font-serif text-4xl text-ivory">${{ class_price|stringformat:"d" }}</p>
+      </div>
     </div>
   </div>
 
@@ -77,7 +81,7 @@
                       {% if slot %}
                         {% if slot.can_book %}
                           <a
-                            href="{% url 'core:public_single_class_booking' %}?session={{ slot.session.id }}#reserva-clase-suelta"
+                            href="{% url 'core:public_single_class_booking' %}?session={{ slot.session.id }}&tipo={{ tipo_clase }}#reserva-clase-suelta"
                             class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_selected %}border-olive bg-olive text-ivory ring-2 ring-olive/20{% else %}border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35{% endif %}"
                           >
                             <div class="flex items-start justify-between gap-2">
@@ -123,7 +127,7 @@
     </div>
 
     <div id="reserva-clase-suelta" class="rounded-[2rem] border border-olive/12 bg-card p-8" x-data="{ metodo: 'transferencia' }">
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud de clase suelta</p>
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud de {{ class_title }}</p>
       <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Completa tus datos</h2>
 
       {% if selected_single_class_session %}
@@ -149,6 +153,7 @@
       <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
         {% csrf_token %}
         {{ single_class_booking_form.session_id }}
+        {{ single_class_booking_form.tipo_clase }}
         <div class="grid gap-4 md:grid-cols-2">
           <div>
             <label for="{{ single_class_booking_form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.nombre.label }}</label>
@@ -233,7 +238,7 @@
           {{ single_class_booking_form.notas }}
           {% for error in single_class_booking_form.notas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
-        <button type="submit" class="btn-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>Enviar solicitud de clase suelta</button>
+        <button type="submit" class="btn-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>Enviar solicitud de {{ class_title }}</button>
         <p class="text-xs leading-relaxed text-charcoal/55">Al enviar esta solicitud registramos tus datos para identificarte, revisar el pago y coordinar tu asistencia al estudio.</p>
       </form>
     </div>

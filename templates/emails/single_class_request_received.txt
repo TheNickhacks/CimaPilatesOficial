@@ -1,6 +1,6 @@
 Hola {{ full_name }},
 
-Recibimos tu solicitud de clase suelta para {{ class_datetime_label }}.
+Recibimos tu solicitud de {{ class_type_name|default:"clase suelta"|lower }} para {{ class_datetime_label }}.
 
 Metodo de pago seleccionado: {{ payment_method_label }}.
 

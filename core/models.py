@@ -112,6 +112,13 @@ class PlanRequest(models.Model):
 		db_table = "solicitudes_planes"
 		ordering = ("-created_at",)
 
+	@property
+	def comprobante_url(self) -> str | None:
+		if self.comprobante_path:
+			from django.conf import settings
+			return f"{settings.MEDIA_URL}{self.comprobante_path}"
+		return None
+
 	def __str__(self) -> str:
 		return f"{self.user_id} - {self.plan.nombre} ({self.get_estado_display()})"
 
@@ -171,6 +178,11 @@ class SingleClassBookingStatus(models.TextChoices):
 	CANCELLED = "cancelada", "Cancelada"
 
 
+class SingleClassType(models.TextChoices):
+	PRUEBA = "prueba", "Clase de Prueba ($5.000)"
+	SUELTA = "suelta", "Clase Suelta ($9.990)"
+
+
 class SingleClassBooking(models.Model):
 	id = models.BigAutoField(primary_key=True)
 	class_session = models.ForeignKey(
@@ -190,6 +202,11 @@ class SingleClassBooking(models.Model):
 	metodo_pago = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.IN_STUDIO)
 	notas = models.TextField(null=True, blank=True)
 	comprobante_path = models.CharField(max_length=255, null=True, blank=True)
+	tipo_clase = models.CharField(
+		max_length=30,
+		choices=SingleClassType.choices,
+		default=SingleClassType.PRUEBA,
+	)
 	estado = models.CharField(max_length=20, choices=SingleClassBookingStatus.choices, default=SingleClassBookingStatus.PENDING)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
@@ -198,6 +215,13 @@ class SingleClassBooking(models.Model):
 		managed = False
 		db_table = "solicitudes_clase_suelta"
 		ordering = ("-created_at",)
+
+	@property
+	def comprobante_url(self) -> str | None:
+		if self.comprobante_path:
+			from django.conf import settings
+			return f"{settings.MEDIA_URL}{self.comprobante_path}"
+		return None
 
 	def __str__(self) -> str:
 		return f"{self.nombre} {self.apellido or ''} - {self.class_session_id}".strip()

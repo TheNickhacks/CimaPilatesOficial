@@ -1,6 +1,6 @@
 Hola {{ full_name }},
 
-¡Tu clase suelta para {{ class_datetime_label }} está confirmada!
+¡Tu {{ class_type_name|default:"clase suelta"|lower }} para {{ class_datetime_label }} está confirmada!
 
 Hemos aprobado tu pago y tu asistencia ha sido registrada con éxito. Te esperamos en el estudio. Recuerda asistir con ropa cómoda.
 

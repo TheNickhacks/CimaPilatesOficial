@@ -213,7 +213,7 @@
                         </span>
                       </template>
                     </div>
-                    <p class="text-xs text-charcoal/50 truncate" x-text="attendee.email + (attendee.type === 'single' ? ' · Clase Suelta' : '')" :title="attendee.email"></p>
+                    <p class="text-xs text-charcoal/50 truncate" x-text="attendee.email + (attendee.type === 'single' ? (' · ' + (attendee.tipo_label || 'Clase Suelta')) : '')" :title="attendee.email"></p>
                     
                     <template x-if="attendee.type === 'single' && attendee.comprobante_url">
                       <div class="mt-1">
@@ -272,6 +272,7 @@
               <input type="hidden" name="session_id" :value="selectedSlot ? selectedSlot.sessionId : ''" />
               <div>
                 <label class="text-sm font-medium text-charcoal">Correo de la usuaria</label>
+                <p class="mt-1 text-xs text-charcoal/60">Permite agendar manualmente. Si la clase está bloqueada, usuarias con Plan Vendido confirmado sí podrán ser agendadas.</p>
                 <input name="user_email" type="email" required class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="alumna@correo.com" />
               </div>
               <div>

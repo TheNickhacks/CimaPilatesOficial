@@ -18,4 +18,5 @@ urlpatterns = [
     path("dashboard/admin/agenda/quitar/", views.admin_remove_attendee, name="admin_remove_attendee"),
     path("dashboard/admin/agenda/confirmar-pago/", views.admin_confirm_single_class_payment, name="admin_confirm_single_class_payment"),
     path("dashboard/admin/planes/", views.admin_plan_pricing_view, name="admin_plan_pricing"),
+    path("dashboard/reporte-horas-excel/", views.export_teacher_hours_excel, name="export_teacher_hours_excel"),
 ]

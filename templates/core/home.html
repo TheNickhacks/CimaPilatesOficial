@@ -200,18 +200,23 @@
           <h2 class="mt-4 font-serif text-4xl font-light leading-tight text-forest">Tu momento<br>empieza <span
               class="italic text-olive">aquí</span>.</h2>
 
-          <div class="mt-6 flex items-center gap-3">
-            <span class="text-sm font-medium text-charcoal/80 uppercase tracking-wider">Clase Suelta</span>
-            <span
-              class="inline-flex items-center gap-1 rounded bg-terracota px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
-              $5.000 ☀️
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center gap-1 rounded bg-terracota px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
+              Prueba $5.000 ☀️
+            </span>
+            <span class="inline-flex items-center gap-1 rounded bg-forest/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-forest border border-forest/20 shadow-sm">
+              Suelta $9.990 🌿
             </span>
           </div>
 
-          <div class="mt-8">
-            <a href="{% url 'core:public_single_class_booking' %}"
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="{% url 'core:public_single_class_booking' %}?tipo=prueba"
               class="inline-flex items-center justify-center rounded-full bg-forest px-6 py-3 text-sm font-medium text-white transition-all hover:bg-terracota shadow-sm">
-              Reserva tu clase
+              Clase de Prueba ($5.000)
+            </a>
+            <a href="{% url 'core:public_single_class_booking' %}?tipo=suelta"
+              class="inline-flex items-center justify-center rounded-full border border-forest/30 bg-white px-6 py-3 text-sm font-medium text-forest transition-all hover:bg-forest hover:text-white shadow-sm">
+              Clase Suelta ($9.990)
             </a>
           </div>
         </div>
@@ -322,26 +327,42 @@
         {% endfor %}
       </div>
 
-      <!-- Clase suelta -->
-      {% if single_class_plan %}
-      <div
-        class="mt-4 flex flex-col items-start justify-between gap-5 rounded-[1.75rem] border border-forest/10 bg-white p-7 md:flex-row md:items-center">
-        <div>
-          <span class="inline-flex rounded-full bg-terracota/10 px-3 py-1 text-xs font-medium text-terracota">Clase
-            Individual</span>
-          <h3 class="mt-3 font-serif text-2xl text-charcoal">{{ single_class_plan.nombre }}</h3>
-          <p class="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70">
-            {{ single_class_plan.descripcion }}
-          </p>
+      <!-- Clases individuales (Prueba y Suelta) -->
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-terracota/20 bg-white p-7 shadow-sm">
+          <div>
+            <span class="inline-flex rounded-full bg-terracota/10 px-3 py-1 text-xs font-semibold text-terracota">Primera Clase · $5.000</span>
+            <h3 class="mt-3 font-serif text-2xl text-charcoal">Clase de Prueba</h3>
+            <p class="mt-2 text-sm leading-relaxed text-charcoal/70">
+              Ideal para conocer nuestro estudio, probar las máquinas Reformer y experimentar la guiada personalizada (promoción única de 1 clase por persona).
+            </p>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-forest/5">
+            <p class="font-serif text-3xl font-light text-forest">$5.000</p>
+            <a href="{% url 'core:public_single_class_booking' %}?tipo=prueba"
+              class="rounded-full bg-terracota px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-forest hover:-translate-y-0.5 shadow-sm">
+              Agendar Prueba
+            </a>
+          </div>
         </div>
-        <div class="flex items-center gap-5">
-          <p class="font-serif text-4xl font-light text-forest">${{ single_class_plan.precio_mensual_formateado }}</p>
-          <a href="{% url 'core:public_single_class_booking' %}"
-            class="rounded-full bg-terracota px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-forest hover:-translate-y-0.5 shadow-sm">Reservar
-            ahora</a>
+
+        <div class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-forest/10 bg-white p-7 shadow-sm">
+          <div>
+            <span class="inline-flex rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">Asistencia Flexible · $9.990</span>
+            <h3 class="mt-3 font-serif text-2xl text-charcoal">Clase Suelta</h3>
+            <p class="mt-2 text-sm leading-relaxed text-charcoal/70">
+              Perfecta para entrenar de forma independiente, adaptar tus horarios y reservar clases puntuales según tu disponibilidad sin compromisos mensuales.
+            </p>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-forest/5">
+            <p class="font-serif text-3xl font-light text-forest">$9.990</p>
+            <a href="{% url 'core:public_single_class_booking' %}?tipo=suelta"
+              class="rounded-full bg-forest px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-terracota hover:-translate-y-0.5 shadow-sm">
+              Agendar Clase Suelta
+            </a>
+          </div>
         </div>
       </div>
-      {% endif %}
     </div>
   </section>
 

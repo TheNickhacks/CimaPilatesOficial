@@ -147,6 +147,7 @@ class ClassReservationForm(forms.Form):
 
 class SingleClassPublicBookingForm(forms.Form):
 	session_id = forms.IntegerField(widget=forms.HiddenInput())
+	tipo_clase = forms.CharField(widget=forms.HiddenInput(), initial="prueba", required=False)
 	nombre = forms.CharField(max_length=100, label="Nombre")
 	apellido = forms.CharField(max_length=100, label="Apellido", required=False)
 	rut = forms.CharField(max_length=15, label="RUT")
@@ -207,6 +208,12 @@ class SingleClassPublicBookingForm(forms.Form):
 			raise forms.ValidationError("La clase seleccionada ya no esta disponible.")
 		return session_id
 
+	def clean_tipo_clase(self):
+		tipo = (self.cleaned_data.get("tipo_clase") or "prueba").strip().lower()
+		if tipo not in {"prueba", "suelta"}:
+			tipo = "prueba"
+		return tipo
+
 	def clean_rut(self):
 		return normalize_rut(self.cleaned_data["rut"])
 
@@ -219,17 +226,14 @@ class SingleClassPublicBookingForm(forms.Form):
 			return cleaned_data
 		email = cleaned_data.get("email")
 		rut = cleaned_data.get("rut")
-
-		from core.models import PlanCatalog
-		single_class_plan = PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first()
-		is_trial_price = False
-		if single_class_plan and single_class_plan.precio_mensual == 5000:
-			is_trial_price = True
+		tipo_clase = cleaned_data.get("tipo_clase") or "prueba"
+		is_trial = (tipo_clase == "prueba")
 
 		if email:
-			if is_trial_price:
+			if is_trial:
 				if SingleClassBooking.objects.filter(
 					email__iexact=email,
+					tipo_clase="prueba",
 					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
 				).exists():
 					self.add_error("email", "La clase de prueba ($5.000) está limitada a 1 por correo electrónico.")
@@ -242,9 +246,10 @@ class SingleClassPublicBookingForm(forms.Form):
 					self.add_error("email", "Ya existe una solicitud activa para esta clase con este correo.")
 
 		if rut:
-			if is_trial_price:
+			if is_trial:
 				if SingleClassBooking.objects.filter(
 					rut=rut,
+					tipo_clase="prueba",
 					estado__in=(SingleClassBookingStatus.PENDING, SingleClassBookingStatus.CONFIRMED),
 				).exists():
 					self.add_error("rut", "La clase de prueba ($5.000) está limitada a 1 por RUT.")
@@ -277,4 +282,5 @@ class SingleClassPublicBookingForm(forms.Form):
 			metodo_pago=self.cleaned_data["metodo_pago"],
 			notas=(self.cleaned_data.get("notas") or "").strip() or None,
 			comprobante_path=comprobante_path,
+			tipo_clase=self.cleaned_data.get("tipo_clase") or "prueba",
 		)

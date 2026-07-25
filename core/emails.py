@@ -50,16 +50,17 @@ def send_plan_request_received_email(email, full_name, plan_name, period_label, 
     )
 
 
-def send_single_class_request_received_email(email, full_name, class_datetime_label, payment_method_label, fail_silently=True):
+def send_single_class_request_received_email(email, full_name, class_datetime_label, payment_method_label, class_type_name="Clase Suelta", fail_silently=True):
     context = {
         "full_name": full_name,
         "class_datetime_label": class_datetime_label,
         "payment_method_label": payment_method_label,
+        "class_type_name": class_type_name,
         "site_url": settings.SITE_URL,
         "reply_to_email": settings.REPLY_TO_EMAIL,
     }
     _send_email(
-        "Recibimos tu solicitud de clase suelta en Cima Pilates",
+        f"Recibimos tu solicitud de {class_type_name.lower()} en Cima Pilates",
         email,
         "emails/single_class_request_received.txt",
         "emails/single_class_request_received.html",
@@ -86,15 +87,16 @@ def send_class_reservation_confirmation_request_email(email, full_name, class_da
     )
 
 
-def send_single_class_confirmed_email(email, full_name, class_datetime_label, fail_silently=True):
+def send_single_class_confirmed_email(email, full_name, class_datetime_label, class_type_name="Clase Suelta", fail_silently=True):
     context = {
         "full_name": full_name,
         "class_datetime_label": class_datetime_label,
+        "class_type_name": class_type_name,
         "site_url": settings.SITE_URL,
         "reply_to_email": settings.REPLY_TO_EMAIL,
     }
     _send_email(
-        "Confirmación de tu clase suelta en Cima Pilates",
+        f"Confirmación de tu {class_type_name.lower()} en Cima Pilates",
         email,
         "emails/single_class_confirmed.txt",
         "emails/single_class_confirmed.html",
