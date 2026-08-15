@@ -100,6 +100,12 @@ class PlanRequestForm(forms.Form):
 		return super().clean()
 
 	def save(self, user):
+		from django.utils import timezone
+		from datetime import timedelta
+		five_minutes_ago = timezone.now() - timedelta(minutes=5)
+		if PlanRequest.objects.filter(user=user, created_at__gte=five_minutes_ago).exists():
+			raise forms.ValidationError("Ya has enviado una solicitud de plan recientemente. Por favor espera al menos 5 minutos entre cada solicitud.")
+
 		comprobante = self.files.get("comprobante")
 		comprobante_path = None
 		if comprobante:
@@ -228,6 +234,21 @@ class SingleClassPublicBookingForm(forms.Form):
 		rut = cleaned_data.get("rut")
 		tipo_clase = cleaned_data.get("tipo_clase") or "prueba"
 		is_trial = (tipo_clase == "prueba")
+
+		if is_trial:
+			from datetime import time, timezone as dt_timezone
+			from django.utils import timezone
+			from .models import SystemSetting
+			allow_pm_trials = (SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true")
+			session_dt = self.session.starts_at
+			if timezone.is_naive(session_dt):
+				session_local = timezone.localtime(session_dt.replace(tzinfo=dt_timezone.utc), timezone.get_current_timezone())
+			else:
+				session_local = timezone.localtime(session_dt, timezone.get_current_timezone())
+			if session_local.weekday() < 5 and session_local.time() >= time(12, 0) and not allow_pm_trials:
+				msg = "Las clases de prueba ($5.000) sólo están habilitadas para horario AM y Sábados."
+				self.add_error("session_id", msg)
+				self.add_error(None, msg)
 
 		if email:
 			if is_trial:

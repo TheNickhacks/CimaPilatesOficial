@@ -206,39 +206,41 @@
           {% for error in single_class_booking_form.metodo_pago.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
         
-        <div x-show="metodo === 'transferencia'" class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos de transferencia</p>
-          <div class="mt-4 space-y-2 text-sm text-charcoal/75">
-            {% for label, value in transfer_details %}
-              <p><span class="font-medium text-charcoal">{{ label }}:</span> {{ value }}</p>
-            {% endfor %}
-          </div>
-        </div>
-
-        <div x-show="metodo === 'link_pago'" x-cloak class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Link de Pago (SumUp)</p>
-          <p class="mt-3 text-sm text-charcoal/75">Haz clic en el botón a continuación para realizar el pago de forma segura en SumUp:</p>
-          <div class="mt-4">
-            <a href="{{ single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-2xl bg-olive px-6 py-3 text-sm font-semibold text-ivory hover:bg-olive/90 transition-colors">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-              </svg>
-              Pagar con SumUp
-            </a>
-          </div>
-        </div>
-
-        <div>
-          <label for="{{ single_class_booking_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.comprobante.label }}</label>
-          {{ single_class_booking_form.comprobante }}
-          {% for error in single_class_booking_form.comprobante.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-        </div>
         <div>
           <label for="{{ single_class_booking_form.notas.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.notas.label }}</label>
           {{ single_class_booking_form.notas }}
           {% for error in single_class_booking_form.notas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
-        <button type="submit" class="btn-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>Enviar solicitud de {{ class_title }}</button>
+        
+        <div x-show="metodo === 'transferencia'" class="space-y-4 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos de transferencia</p>
+          <div class="space-y-2 text-sm text-charcoal/75">
+            {% for label, value in transfer_details %}
+              <p><span class="font-medium text-charcoal">{{ label }}:</span> {{ value }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ single_class_booking_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.comprobante.label }}</label>
+            {{ single_class_booking_form.comprobante }}
+            {% for error in single_class_booking_form.comprobante.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+          </div>
+          <button type="submit" class="btn-booking-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>
+            Subir Comprobante y Enviar Solicitud
+          </button>
+        </div>
+
+        <div x-show="metodo === 'link_pago'" x-cloak class="space-y-4 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Link de Pago (SumUp)</p>
+          <p class="text-sm text-charcoal/75">Al presionar el botón a continuación, serás redirigida a SumUp para realizar el pago y al mismo tiempo registramos tu solicitud:</p>
+          <button type="submit"
+                  data-url="{% if is_trial %}{{ single_class_plan.link_pago_prueba|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% else %}{{ single_class_plan.link_pago_suelta|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% endif %}"
+                  @click="if ($el.dataset.url) { window.open($el.dataset.url, '_blank'); }"
+                  class="btn-booking-primary w-full"
+                  {% if not selected_single_class_session %}disabled{% endif %}>
+            Pagar en SumUp y Enviar Solicitud
+          </button>
+        </div>
+
         <p class="text-xs leading-relaxed text-charcoal/55">Al enviar esta solicitud registramos tus datos para identificarte, revisar el pago y coordinar tu asistencia al estudio.</p>
       </form>
     </div>

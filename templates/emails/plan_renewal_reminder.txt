@@ -1,0 +1,11 @@
+Hola {{ full_name }},
+
+Queremos avisarte que te queda sólo 1 clase disponible en tu plan {{ plan_name }} ({{ period_label }}) en Cima Pilates.
+
+Para no perder la continuidad de tus entrenamientos y asegurar tu cupo, te invitamos a renovar tu plan:
+Link de pago: {{ payment_link }}
+
+O gestiona tu renovación desde tu panel de alumna: {{ site_url }}/dashboard/alumna/#solicitud-plan
+
+Un saludo,
+Equipo Cima Pilates

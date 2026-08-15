@@ -103,3 +103,22 @@ def send_single_class_confirmed_email(email, full_name, class_datetime_label, cl
         context,
         fail_silently=fail_silently,
     )
+
+
+def send_plan_renewal_reminder_email(email, full_name, plan_name, period_label, payment_link=None, fail_silently=True):
+    context = {
+        "full_name": full_name,
+        "plan_name": plan_name,
+        "period_label": period_label,
+        "payment_link": payment_link or f"{settings.SITE_URL}/dashboard/alumna/#solicitud-plan",
+        "site_url": settings.SITE_URL,
+        "reply_to_email": settings.REPLY_TO_EMAIL,
+    }
+    _send_email(
+        f"¡Te queda 1 clase en tu plan {plan_name}! Renueva en Cima Pilates",
+        email,
+        "emails/plan_renewal_reminder.txt",
+        "emails/plan_renewal_reminder.html",
+        context,
+        fail_silently=fail_silently,
+    )

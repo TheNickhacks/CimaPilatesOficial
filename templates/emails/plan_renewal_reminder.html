@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Renueva tu plan en Cima Pilates</title>
+</head>
+<body style="font-family: sans-serif; background-color: #F7F3EA; padding: 20px; color: #212426;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid rgba(111, 122, 62, 0.2);">
+    <h2 style="color: #6F7A3E; margin-top: 0;">¡Hola, {{ full_name }}!</h2>
+    <p>Queremos avisarte que te queda <strong>sólo 1 clase disponible</strong> en tu plan <strong>{{ plan_name }} ({{ period_label }})</strong> en Cima Pilates.</p>
+    <p>Para no perder la continuidad de tus entrenamientos y asegurar tu cupo para la siguiente etapa, te invitamos a renovar tu plan ahora mismo.</p>
+    {% if payment_link %}
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="{{ payment_link }}" target="_blank" style="background-color: #23331C; color: #ffffff; padding: 14px 28px; border-radius: 99px; text-decoration: none; font-weight: bold; display: inline-block;">Realizar Pago y Renovar Plan</a>
+    </div>
+    {% endif %}
+    <p>También puedes ingresar directamente a tu panel de alumna para gestionar tu renovación:</p>
+    <p style="text-align: center;">
+      <a href="{{ site_url }}/dashboard/alumna/#solicitud-plan" style="color: #6F7A3E; font-weight: bold;">Ir a mi Panel de Alumna</a>
+    </p>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+    <p style="font-size: 12px; color: #777;">Cima Pilates SpA — Estudio Boutique de Pilates Reformer.<br>Si tienes dudas, responde directamente a este correo.</p>
+  </div>
+</body>
+</html>

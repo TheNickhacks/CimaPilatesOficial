@@ -30,6 +30,11 @@ class PlanCatalog(models.Model):
 	precio_trimestral = models.PositiveIntegerField()
 	precio_semestral = models.PositiveIntegerField()
 	link_pago = models.CharField(max_length=500, null=True, blank=True)
+	link_pago_mensual = models.CharField(max_length=500, null=True, blank=True)
+	link_pago_trimestral = models.CharField(max_length=500, null=True, blank=True)
+	link_pago_semestral = models.CharField(max_length=500, null=True, blank=True)
+	link_pago_prueba = models.CharField(max_length=500, null=True, blank=True)
+	link_pago_suelta = models.CharField(max_length=500, null=True, blank=True)
 	es_clase_suelta = models.BooleanField(default=False)
 	destacado = models.BooleanField(default=False)
 	descripcion = models.CharField(max_length=255, null=True, blank=True)
@@ -451,3 +456,37 @@ class AdminActionLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_action_type_display()} - {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class SystemSetting(models.Model):
+	id = models.BigAutoField(primary_key=True)
+	key = models.CharField(max_length=100, unique=True)
+	value = models.TextField(null=True, blank=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		managed = False
+		db_table = "configuraciones_sistema"
+
+	def __str__(self) -> str:
+		return f"{self.key} = {self.value}"
+
+	@classmethod
+	def get_setting(cls, key: str, default: str = "") -> str:
+		try:
+			obj = cls.objects.filter(key=key).first()
+			if obj and obj.value is not None:
+				return obj.value
+		except Exception:
+			pass
+		return default
+
+	@classmethod
+	def set_setting(cls, key: str, value: str) -> None:
+		try:
+			obj, _ = cls.objects.get_or_create(key=key)
+			obj.value = str(value)
+			obj.save()
+		except Exception:
+			pass
+

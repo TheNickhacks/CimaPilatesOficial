@@ -159,7 +159,11 @@
                         </div>
                         <div class="mt-3">
                           <p class="text-xs {% if slot.is_booked %}text-ivory/85{% else %}text-charcoal/65{% endif %}">
-                            {{ slot.capacity_left }} cupos disponibles
+                            {% if slot.can_book or slot.is_booked %}
+                              {{ slot.capacity_left }} cupos disponibles
+                            {% else %}
+                              Bloqueada por agenda
+                            {% endif %}
                           </p>
                         </div>
                       </button>
@@ -206,9 +210,19 @@
           <div class="space-y-6 px-6 py-6">
             <div class="grid gap-4 md:grid-cols-2">
               <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cupos disponibles</p>
-                <p class="mt-3 font-serif text-3xl text-charcoal" x-text="selectedSlot ? selectedSlot.availableLabel : '0'"></p>
-                <p class="mt-2 text-sm text-charcoal/60">Capacidad total: <span x-text="selectedSlot ? selectedSlot.capacityLabel : '0'"></span></p>
+                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Disponibilidad</p>
+                <template x-if="selectedSlot && (selectedSlot.canBook || selectedSlot.isBooked)">
+                  <div>
+                    <p class="mt-3 font-serif text-3xl text-charcoal" x-text="selectedSlot.availableLabel"></p>
+                    <p class="mt-2 text-sm text-charcoal/60">Capacidad total: <span x-text="selectedSlot.capacityLabel"></span></p>
+                  </div>
+                </template>
+                <template x-if="selectedSlot && !selectedSlot.canBook && !selectedSlot.isBooked">
+                  <div>
+                    <p class="mt-3 font-serif text-xl font-medium text-charcoal/80">Bloqueada</p>
+                    <p class="mt-1 text-xs text-charcoal/60">Este horario no está disponible para reserva.</p>
+                  </div>
+                </template>
               </div>
               <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
                 <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Profesora</p>
@@ -246,7 +260,7 @@
                   placeholder="Agrega una nota si lo necesitas"
                 ></textarea>
               </div>
-              <button type="submit" class="btn-primary w-full">Reservar clase</button>
+              <button type="submit" class="btn-booking-primary w-full">Reservar clase</button>
             </form>
 
             <div

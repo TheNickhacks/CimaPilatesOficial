@@ -105,6 +105,48 @@ form .helptext {
   color: var(--cp-white);
 }
 
+.btn-booking-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #23331C;
+  color: #FFFFFF;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(35, 51, 28, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-booking-primary:hover {
+  transform: translateY(-1px);
+  background: #192613;
+  color: #FFFFFF;
+  box-shadow: 0 8px 22px rgba(35, 51, 28, 0.4);
+}
+
+.btn-validate-orange {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #E07A5F;
+  color: #FFFFFF;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(224, 122, 95, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-validate-orange:hover {
+  transform: translateY(-1px);
+  background: #C9664B;
+  color: #FFFFFF;
+  box-shadow: 0 6px 16px rgba(224, 122, 95, 0.35);
+}
+
 .btn-outline {
   display: inline-flex;
   align-items: center;

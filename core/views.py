@@ -29,6 +29,7 @@ from .models import (
 	PlanRequestStatus,
 	SingleClassBooking,
 	SingleClassBookingStatus,
+	SystemSetting,
 	TeacherHoursAdjustment,
 	TeacherSessionNote,
 	TeacherShiftKind,
@@ -270,7 +271,7 @@ def _generate_day_slots(day):
 		yield _combine_local_datetime(day, start_time), _combine_local_datetime(day, end_time)
 
 
-def _get_teacher_display_for_session(class_session, teachers=None, monthly_shifts=None):
+def _get_teacher_display_for_session(class_session, teachers=None, monthly_shifts=None, is_student_view=False):
 	local_start = _get_session_local_datetime(class_session.starts_at)
 	shift_kind = _get_shift_kind_for_local_start(local_start)
 	if shift_kind is None:
@@ -281,13 +282,13 @@ def _get_teacher_display_for_session(class_session, teachers=None, monthly_shift
 			s for s in monthly_shifts
 			if s.year == local_start.year and s.month == local_start.month and s.shift_kind == shift_kind
 		]
-		# If the pre-fetched objects do not have select_related teacher, we can resolve from teachers list
-		# but normally they have it. Let's make it robust:
 		if matching_shifts and teachers is not None:
 			teacher_ids = {s.teacher_id for s in matching_shifts}
 			matching_teachers = [t for t in teachers if t.id in teacher_ids]
-			if matching_teachers:
-				return ", ".join(t.get_full_name() or t.email for t in matching_teachers)
+		elif matching_shifts:
+			matching_teachers = [s.teacher for s in matching_shifts if getattr(s, "teacher", None)]
+		else:
+			matching_teachers = []
 	else:
 		matching_shifts = list(
 			TeacherMonthlyShift.objects.filter(
@@ -296,11 +297,26 @@ def _get_teacher_display_for_session(class_session, teachers=None, monthly_shift
 				shift_kind=shift_kind
 			).select_related("teacher")
 		)
+		matching_teachers = [s.teacher for s in matching_shifts if getattr(s, "teacher", None)]
 
-	if not matching_shifts:
+	if not matching_teachers:
 		return "Profesora por confirmar"
 
-	return ", ".join((s.teacher.get_full_name() or s.teacher.email) for s in matching_shifts)
+	if is_student_view and len(matching_teachers) > 1:
+		weekday = local_start.weekday()
+		# Martes (1) y Miercoles (2)
+		if weekday in (1, 2):
+			benjamin_teacher = next((t for t in matching_teachers if "benjam" in (t.get_full_name() or t.email).lower()), None)
+			if benjamin_teacher:
+				return benjamin_teacher.get_full_name() or benjamin_teacher.email
+		# Lunes (0), Jueves (3) y Viernes (4)
+		elif weekday in (0, 3, 4):
+			yasmin_teacher = next((t for t in matching_teachers if "yasm" in (t.get_full_name() or t.email).lower()), None)
+			if yasmin_teacher:
+				return yasmin_teacher.get_full_name() or yasmin_teacher.email
+		return matching_teachers[0].get_full_name() or matching_teachers[0].email
+
+	return ", ".join((t.get_full_name() or t.email) for t in matching_teachers)
 
 
 def _get_shift_kind_for_local_start(local_start):
@@ -883,7 +899,7 @@ def _build_calendar_weeks(schedule_days):
 	return calendar_weeks
 
 
-def _get_default_calendar_week_index(calendar_weeks, preferred_session_id=None):
+def _get_default_calendar_week_index(calendar_weeks, preferred_session_id=None, now=None):
 	if not calendar_weeks:
 		return 0
 
@@ -894,18 +910,13 @@ def _get_default_calendar_week_index(calendar_weeks, preferred_session_id=None):
 					if slot and slot["session"].id == preferred_session_id:
 						return index
 
+	today = (now or timezone.now()).date()
 	for index, week in enumerate(calendar_weeks):
-		if any(row["time_key"] == "07:10" for row in week["time_rows"]):
+		week_dates = [day["date"] for day in week.get("days", [])]
+		if today in week_dates:
 			return index
 
-	best_index = 0
-	best_score = -1
-	for index, week in enumerate(calendar_weeks):
-		score = sum(1 for row in week["time_rows"] for slot in row["cells"] if slot)
-		if score > best_score:
-			best_index = index
-			best_score = score
-	return best_index
+	return 0
 
 
 def _get_capacity_maps(sessions):
@@ -1066,9 +1077,9 @@ def export_teacher_hours_excel(request):
 def _build_schedule_context(user, active_plan_request):
 	today = timezone.localdate()
 	week_start_date = _get_calendar_navigation_start_date(today)
-	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	_ensure_schedule_sessions(week_start_date, 14)
 	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=14), time(0, 0)))
 	now = timezone.now()
 	sessions = list(
 		ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end)
@@ -1141,11 +1152,11 @@ def _build_schedule_context(user, active_plan_request):
 				"single_class_count": len(capacity_maps["single_class_by_session"][session.id]),
 				"student_count": len(capacity_maps["student_by_session"][session.id]),
 				"time_key": local_start.strftime("%H:%M"),
-				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers, monthly_shifts=monthly_shifts),
+				"teacher_label": _get_teacher_display_for_session(session, teachers=teachers, monthly_shifts=monthly_shifts, is_student_view=True),
 			}
 		)
 
-	calendar_weeks = _build_calendar_weeks(schedule_days)
+	calendar_weeks = _build_calendar_weeks(schedule_days)[:2]
 	return {
 		"schedule_days": schedule_days,
 		"calendar_weeks": calendar_weeks,
@@ -1168,9 +1179,9 @@ def _format_session_label(class_session):
 def _build_public_single_class_context(selected_session_id=None, booking_form=None, tipo_clase="prueba"):
 	today = timezone.localdate()
 	week_start_date = _get_calendar_navigation_start_date(today)
-	_ensure_schedule_sessions(week_start_date, DISPLAY_SCHEDULE_DAYS)
+	_ensure_schedule_sessions(week_start_date, 14)
 	window_start = _to_session_storage_datetime(_combine_local_datetime(week_start_date, time(0, 0)))
-	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=DISPLAY_SCHEDULE_DAYS), time(0, 0)))
+	window_end = _to_session_storage_datetime(_combine_local_datetime(week_start_date + timedelta(days=14), time(0, 0)))
 	now = timezone.now()
 	sessions = list(
 		ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end)
@@ -1179,6 +1190,14 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 	capacity_maps = _get_capacity_maps(sessions)
 	schedule_days = []
 	selected_session = next((session for session in sessions if session.id == selected_session_id), None)
+	
+	is_trial = (tipo_clase == "prueba")
+	allow_pm_trials = (SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true")
+	if selected_session and is_trial and not allow_pm_trials:
+		sel_start = _get_session_local_datetime(selected_session.starts_at)
+		if sel_start.weekday() < 5 and sel_start.time() >= time(12, 0):
+			selected_session = None
+
 	for session in sessions:
 		local_start = _get_session_local_datetime(session.starts_at)
 		local_end = _get_session_local_datetime(session.ends_at)
@@ -1199,6 +1218,12 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		if can_book and total_reservations >= session.capacidad_maxima:
 			can_book = False
 			blocked_reason = "Este bloque ya completo sus 4 cupos."
+
+		if is_trial and not allow_pm_trials:
+			if local_start.weekday() < 5 and local_start.time() >= time(12, 0):
+				can_book = False
+				blocked_reason = "Clase de prueba ($5.000) sólo disponible en horario AM y Sábados."
+
 		schedule_days[-1]["slots"].append(
 			{
 				"session": session,
@@ -1210,14 +1235,14 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 				"capacity_left": max(session.capacidad_maxima - total_reservations, 0),
 				"can_book": can_book,
 				"blocked_reason": blocked_reason,
-				"is_selected": selected_session_id == session.id,
+				"is_selected": selected_session and selected_session.id == session.id,
 				"booking_opens_at": local_start - BOOKING_OPEN_DELTA,
 				"booking_opens_at_label": (local_start - BOOKING_OPEN_DELTA).strftime("%d/%m/%Y %H:%M"),
 				"time_key": local_start.strftime("%H:%M"),
 			}
 		)
 
-	calendar_weeks = _build_calendar_weeks(schedule_days)
+	calendar_weeks = _build_calendar_weeks(schedule_days)[:2]
 	initial_data = {"tipo_clase": tipo_clase}
 	if selected_session:
 		initial_data["session_id"] = selected_session.id
@@ -1417,6 +1442,24 @@ def student_schedule(request):
 							user=request.user,
 							nota=reservation_form.cleaned_data["nota"] or None,
 						)
+
+						remaining_after = allowed_total - (used_total + 1)
+						if remaining_after == 1 and active_plan_request is not None:
+							from .emails import send_plan_renewal_reminder_email
+							payment_link = (
+								active_plan_request.plan.link_pago_mensual if active_plan_request.periodo == PlanBillingPeriod.MONTHLY else
+								active_plan_request.plan.link_pago_trimestral if active_plan_request.periodo == PlanBillingPeriod.QUARTERLY else
+								active_plan_request.plan.link_pago_semestral if active_plan_request.periodo == PlanBillingPeriod.SEMESTER else
+								active_plan_request.plan.link_pago
+							)
+							send_plan_renewal_reminder_email(
+								email=request.user.email,
+								full_name=request.user.get_full_name() or request.user.email,
+								plan_name=active_plan_request.plan.nombre,
+								period_label=active_plan_request.get_periodo_display(),
+								payment_link=payment_link,
+							)
+
 						messages.success(request, "Tu clase quedo reservada correctamente.")
 						return redirect("core:student_schedule")
 				except IntegrityError:
@@ -1843,6 +1886,14 @@ def _build_admin_overview_context(selected_month=None):
 def admin_dashboard(request):
 	if request.method == "POST":
 		action = request.POST.get("action")
+		if action == "toggle_pm_trials":
+			current_val = SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true"
+			new_val = "false" if current_val else "true"
+			SystemSetting.set_setting("allow_pm_trial_classes", new_val)
+			msg = "Las clases de prueba en horario PM ahora están HABILITADAS." if new_val == "true" else "Las clases de prueba en horario PM ahora están BLOQUEADAS."
+			messages.success(request, msg)
+			return redirect("core:admin_dashboard")
+
 		if action in {"confirm_plan", "reject_plan"}:
 			try:
 				plan_request_id = int(request.POST.get("plan_request_id") or "")
@@ -2074,6 +2125,7 @@ def admin_dashboard(request):
 		"plan_approval_history": plan_approval_history,
 		"student_search_query": student_search_query,
 		"approved_students_search_results": approved_students_search_results,
+		"allow_pm_trial_classes": SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true",
 	}
 	context.update(_build_admin_overview_context(selected_month=selected_month))
 	return render(request, "core/dashboards/admin.html", context)
@@ -2295,12 +2347,24 @@ def admin_plan_pricing_view(request):
 				plan.precio_semestral = int(request.POST.get("precio_semestral") or plan.precio_semestral)
 				if "link_pago" in request.POST:
 					plan.link_pago = (request.POST.get("link_pago") or "").strip() or None
-				plan.save(update_fields=["precio_mensual", "precio_trimestral", "precio_semestral", "link_pago", "updated_at"])
+				if "link_pago_mensual" in request.POST:
+					plan.link_pago_mensual = (request.POST.get("link_pago_mensual") or "").strip() or None
+				if "link_pago_trimestral" in request.POST:
+					plan.link_pago_trimestral = (request.POST.get("link_pago_trimestral") or "").strip() or None
+				if "link_pago_semestral" in request.POST:
+					plan.link_pago_semestral = (request.POST.get("link_pago_semestral") or "").strip() or None
+				if "link_pago_prueba" in request.POST:
+					plan.link_pago_prueba = (request.POST.get("link_pago_prueba") or "").strip() or None
+				if "link_pago_suelta" in request.POST:
+					plan.link_pago_suelta = (request.POST.get("link_pago_suelta") or "").strip() or None
+
+				plan.save(update_fields=[
+					"precio_mensual", "precio_trimestral", "precio_semestral",
+					"link_pago", "link_pago_mensual", "link_pago_trimestral", "link_pago_semestral",
+					"link_pago_prueba", "link_pago_suelta", "updated_at"
+				])
 				
-				details_log = f"{plan.nombre}: {plan.precio_mensual} / {plan.precio_trimestral} / {plan.precio_semestral}"
-				if plan.link_pago:
-					details_log += f" | Link: {plan.link_pago}"
-				
+				details_log = f"{plan.nombre}: ${plan.precio_mensual} / ${plan.precio_trimestral} / ${plan.precio_semestral}"
 				_log_admin_action(
 					request.user,
 					AdminActionType.PLAN_PRICE_UPDATED,

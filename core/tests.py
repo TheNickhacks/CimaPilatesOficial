@@ -93,3 +93,32 @@ class SingleClassFlowTests(TestCase):
 
         booking_no_proof = SingleClassBooking(comprobante_path=None)
         self.assertIsNone(booking_no_proof.comprobante_url)
+
+    def test_pm_trial_restriction(self):
+        # Session in weekday PM (e.g. 17:00 on a Monday)
+        now = timezone.now()
+        # Find next Monday 17:00
+        days_ahead = 0 - now.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = (now + timedelta(days=days_ahead)).replace(hour=17, minute=0, second=0, microsecond=0)
+        pm_session = ClassSession.objects.create(
+            starts_at=next_monday,
+            ends_at=next_monday + timedelta(hours=1),
+            capacidad_maxima=4,
+        )
+
+        form_data = {
+            "session_id": pm_session.id,
+            "tipo_clase": "prueba",
+            "nombre": "Camila",
+            "rut": "18.765.432-1",
+            "email": "camila@example.com",
+            "telefono": "+56912345678",
+            "edad": 28,
+            "metodo_pago": "transferencia",
+        }
+        form = SingleClassPublicBookingForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("session_id", form.errors)
+

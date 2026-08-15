@@ -20,6 +20,22 @@
     </form>
   </div>
 
+  <!-- Switch de Configuración: Clases de Prueba PM -->
+  <div class="mt-6 rounded-[1.5rem] border border-olive/12 bg-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Configuración de Clases de Prueba</p>
+      <h3 class="text-lg font-serif text-charcoal">Clases de Prueba en Horario PM</h3>
+      <p class="text-xs text-charcoal/70 mt-1">Por defecto las clases de prueba ($5.000) sólo están permitidas en horario AM y Sábados. Activa esta opción para permitir reservas en horario PM.</p>
+    </div>
+    <form method="post" class="flex items-center gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="toggle_pm_trials" />
+      <button type="submit" class="rounded-full px-5 py-2.5 text-xs font-semibold transition-all {% if allow_pm_trial_classes %}bg-emerald-700 text-ivory hover:bg-emerald-800{% else %}bg-amber-700 text-ivory hover:bg-amber-800{% endif %}">
+        {% if allow_pm_trial_classes %}✓ Habilitadas en PM (Clic para Bloquear){% else %}🔒 Bloqueadas en PM (Clic para Habilitar){% endif %}
+      </button>
+    </form>
+  </div>
+
   <!-- KPIs Principales Operativos y Financieros -->
   <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
     <div class="rounded-[1.5rem] border border-olive/12 bg-card p-7">
@@ -259,7 +275,16 @@
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p class="text-sm font-medium text-charcoal">{{ request_item.user.get_full_name|default:request_item.user.email }}</p>
-                  <p class="mt-1 text-xs text-charcoal/70">{{ request_item.user.email }} · {{ request_item.plan.nombre }} · {{ request_item.get_periodo_display }}</p>
+                  <p class="mt-1 text-xs text-charcoal/70">
+                    {{ request_item.user.email }}
+                    {% if request_item.user.telefono %}
+                      · <a href="https://wa.me/{{ request_item.user.telefono|cut:' '|cut:'+'|cut:'-' }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline" title="Enviar WhatsApp a {{ request_item.user.telefono }}">
+                          <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.76.459 3.474 1.333 4.988l-1.417 5.176 5.297-1.389c1.455.793 3.1 1.212 4.773 1.213h.004c5.505 0 9.989-4.478 9.99-9.984 0-2.667-1.037-5.174-2.923-7.062-1.885-1.887-4.392-2.926-7.057-2.926zm5.823 14.341c-.244.688-1.424 1.314-1.961 1.396-.511.078-1.168.113-1.88-.114-1.464-.467-3.238-1.579-4.66-3.003-1.282-1.284-2.296-2.846-2.731-4.225-.262-.83-.024-1.597.262-2.079.231-.389.518-.485.696-.485.178 0 .356.002.51.01.164.009.387-.062.605.463.227.546.772 1.88.84 2.018.067.137.112.299.022.477-.089.178-.133.289-.267.446-.134.156-.282.348-.403.468-.134.133-.274.278-.118.546.156.267.692 1.142 1.485 1.848 1.02.909 1.881 1.192 2.148 1.325.267.134.423.112.579-.067.156-.178.668-.78.847-1.047.178-.267.356-.223.601-.134.245.089 1.559.735 1.826.869.267.134.446.201.512.312.067.112.067.646-.177 1.334z"/></svg>
+                          {{ request_item.user.telefono }}
+                        </a>
+                    {% endif %}
+                    · {{ request_item.plan.nombre }} · {{ request_item.get_periodo_display }}
+                  </p>
                   <p class="mt-1 text-xs text-charcoal/60">Estado: {{ request_item.get_estado_display }}</p>
                   {% if request_item.comprobante_url %}
                     <div class="mt-2">
@@ -277,7 +302,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="confirm_plan" />
                     <input type="hidden" name="plan_request_id" value="{{ request_item.id }}" />
-                    <button type="submit" class="rounded-full bg-olive px-5 py-2.5 text-sm font-medium text-ivory shadow-sm transition-transform hover:-translate-y-0.5">Confirmar</button>
+                    <button type="submit" class="btn-validate-orange">Confirmar</button>
                   </form>
                   <form method="post">
                     {% csrf_token %}
