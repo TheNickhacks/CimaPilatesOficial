@@ -122,3 +122,33 @@ class SingleClassFlowTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("session_id", form.errors)
 
+    def test_receptionist_role_permissions(self):
+        from accounts.models import UserRole
+        from django.urls import reverse
+
+        receptionist = User.objects.create_user(
+            email="recepcion@cimapilates.cl",
+            password="Password123!",
+            nombre="Valentina",
+            apellido="Recepción",
+            role=UserRole.RECEPTION,
+        )
+        self.client.force_login(receptionist)
+
+        # Test dashboard redirect sends receptionists to reception_dashboard
+        res = self.client.get(reverse("core:dashboard_redirect"))
+        self.assertRedirects(res, reverse("core:reception_dashboard"))
+
+        # Test reception dashboard loads successfully
+        res = self.client.get(reverse("core:reception_dashboard"))
+        self.assertEqual(res.status_code, 200)
+
+        # Test admin schedule access allowed for receptionist
+        res = self.client.get(reverse("core:admin_schedule"))
+        self.assertEqual(res.status_code, 200)
+
+        # Test price editing forbidden for receptionist (financial/pricing settings)
+        res = self.client.get(reverse("core:admin_plan_pricing"))
+        self.assertEqual(res.status_code, 403)
+
+

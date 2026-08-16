@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User, UserRole
-from accounts.permissions import admin_required, student_required, teacher_required
+from accounts.permissions import admin_required, student_required, teacher_required, reception_required
 from . import holidays_cl
 from .emails import send_plan_request_received_email, send_single_class_request_received_email
 from .forms import ClassReservationForm, LandingLeadForm, PlanRequestForm, SingleClassPublicBookingForm
@@ -302,19 +302,18 @@ def _get_teacher_display_for_session(class_session, teachers=None, monthly_shift
 	if not matching_teachers:
 		return "Profesora por confirmar"
 
-	if is_student_view and len(matching_teachers) > 1:
+	if len(matching_teachers) > 1 and shift_kind == "am":
 		weekday = local_start.weekday()
-		# Martes (1) y Miercoles (2)
+		# Martes (1) y Miercoles (2) -> Benjamín
 		if weekday in (1, 2):
 			benjamin_teacher = next((t for t in matching_teachers if "benjam" in (t.get_full_name() or t.email).lower()), None)
 			if benjamin_teacher:
 				return benjamin_teacher.get_full_name() or benjamin_teacher.email
-		# Lunes (0), Jueves (3) y Viernes (4)
+		# Lunes (0), Jueves (3) y Viernes (4) -> Yasmín
 		elif weekday in (0, 3, 4):
 			yasmin_teacher = next((t for t in matching_teachers if "yasm" in (t.get_full_name() or t.email).lower()), None)
 			if yasmin_teacher:
 				return yasmin_teacher.get_full_name() or yasmin_teacher.email
-		return matching_teachers[0].get_full_name() or matching_teachers[0].email
 
 	return ", ".join((t.get_full_name() or t.email) for t in matching_teachers)
 
@@ -1305,7 +1304,9 @@ def dashboard_redirect(request):
 	query_string = request.GET.urlencode()
 	if role == UserRole.ADMIN:
 		target = reverse("core:admin_dashboard")
-	elif role in {UserRole.TEACHER, UserRole.RECEPTION}:
+	elif role == UserRole.RECEPTION:
+		target = reverse("core:reception_dashboard")
+	elif role == UserRole.TEACHER:
 		target = reverse("core:teacher_dashboard")
 	else:
 		target = reverse("core:student_dashboard")
@@ -2132,7 +2133,207 @@ def admin_dashboard(request):
 
 
 @login_required
-@admin_required
+@reception_required
+def reception_dashboard(request):
+	redirect_target = "core:reception_dashboard" if request.user.role == UserRole.RECEPTION else "core:admin_dashboard"
+	if request.method == "POST":
+		action = request.POST.get("action")
+		if action == "toggle_pm_trials":
+			if request.user.role == UserRole.RECEPTION:
+				messages.error(request, "Sólo los administradores pueden cambiar la configuración de clases de prueba PM.")
+				return redirect("core:reception_dashboard")
+			current_val = SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true"
+			new_val = "false" if current_val else "true"
+			SystemSetting.set_setting("allow_pm_trial_classes", new_val)
+			msg = "Las clases de prueba en horario PM ahora están HABILITADAS." if new_val == "true" else "Las clases de prueba en horario PM ahora están BLOQUEADAS."
+			messages.success(request, msg)
+			return redirect(redirect_target)
+
+		if action in {"confirm_plan", "reject_plan"}:
+			try:
+				plan_request_id = int(request.POST.get("plan_request_id") or "")
+			except (TypeError, ValueError):
+				plan_request_id = None
+			if not plan_request_id:
+				messages.error(request, "No encontramos la solicitud seleccionada.")
+				return redirect(redirect_target)
+			try:
+				with transaction.atomic():
+					plan_request = PlanRequest.objects.select_for_update().get(pk=plan_request_id)
+					if action == "confirm_plan":
+						plan_request.estado = PlanRequestStatus.CONFIRMED
+						plan_request.save(update_fields=["estado", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.PLAN_CONFIRMED,
+							target_user=plan_request.user,
+							plan_request=plan_request,
+							details=f"{plan_request.plan.nombre} · {plan_request.get_periodo_display()}",
+						)
+						messages.success(request, "La solicitud fue confirmada y el plan quedó vigente.")
+					else:
+						plan_request.estado = PlanRequestStatus.REJECTED
+						plan_request.save(update_fields=["estado", "updated_at"])
+						_log_admin_action(
+							request.user,
+							AdminActionType.PLAN_REJECTED,
+							target_user=plan_request.user,
+							plan_request=plan_request,
+							details=f"{plan_request.plan.nombre} · {plan_request.get_periodo_display()}",
+						)
+						messages.success(request, "La solicitud fue rechazada.")
+			except PlanRequest.DoesNotExist:
+				messages.error(request, "No encontramos la solicitud seleccionada.")
+			return redirect(redirect_target)
+
+		if action == "add_bonus_classes":
+			email = (request.POST.get("student_email") or "").strip().lower()
+			motivo = (request.POST.get("motivo") or "").strip() or None
+			try:
+				cantidad = int(request.POST.get("cantidad") or "0")
+			except (TypeError, ValueError):
+				cantidad = 0
+			if not email or cantidad == 0:
+				messages.error(request, "Ingresa el correo de la alumna y una cantidad válida distinta de 0.")
+				return redirect(redirect_target)
+			student = User.objects.filter(email__iexact=email).first()
+			if student is None:
+				messages.error(request, "No encontramos una alumna con ese correo.")
+				return redirect(redirect_target)
+			active_plan = _get_active_plan_request(student)
+			if active_plan is None:
+				messages.error(request, "La alumna no tiene un plan vigente confirmado.")
+				return redirect(redirect_target)
+			adjustment = ClassCreditAdjustment.objects.create(
+				user=student,
+				plan_request=active_plan,
+				cantidad=cantidad,
+				motivo=motivo,
+			)
+			if cantidad > 0:
+				detail_str = f"+{cantidad} clases"
+				success_msg = f"Se agregaron {cantidad} clases adicionales a la cuenta de la alumna."
+			else:
+				detail_str = f"{cantidad} clases"
+				success_msg = f"Se descontaron {abs(cantidad)} clases de la cuenta de la alumna."
+			_log_admin_action(
+				request.user,
+				AdminActionType.BONUS_CLASSES_ADDED,
+				target_user=student,
+				plan_request=active_plan,
+				details=detail_str,
+			)
+			messages.success(request, success_msg)
+			return redirect(redirect_target)
+
+		if action == "cancel_student_plan":
+			email = (request.POST.get("student_email") or "").strip().lower()
+			if not email:
+				messages.error(request, "Ingresa el correo de la alumna.")
+				return redirect(redirect_target)
+			student = User.objects.filter(email__iexact=email).first()
+			if student is None:
+				messages.error(request, "No encontramos una alumna con ese correo.")
+				return redirect(redirect_target)
+			active_plan = _get_active_plan_request(student)
+			if active_plan is None:
+				messages.error(request, "La alumna no tiene un plan activo para cancelar.")
+				return redirect(redirect_target)
+			active_plan.estado = PlanRequestStatus.REJECTED
+			active_plan.save(update_fields=["estado", "updated_at"])
+			_log_admin_action(
+				request.user,
+				AdminActionType.PLAN_REJECTED,
+				target_user=student,
+				plan_request=active_plan,
+				details=f"Plan cancelado manualmente por recepción para {student.email}",
+			)
+			messages.success(request, f"El plan de {student.get_full_name() or student.email} fue cancelado exitosamente.")
+			return redirect(redirect_target)
+
+	pending_plan_requests = list(
+		PlanRequest.objects.filter(estado__in=(PlanRequestStatus.PENDING, PlanRequestStatus.UNDER_REVIEW))
+		.select_related("user", "plan")
+		.order_by("-created_at")[:25]
+	)
+	recent_confirmed_plans = list(
+		PlanRequest.objects.filter(estado=PlanRequestStatus.CONFIRMED)
+		.select_related("user", "plan")
+		.order_by("-created_at")[:10]
+	)
+	student_search_query = (request.GET.get("student_search") or "").strip()
+	approved_students_search_results = []
+	if student_search_query:
+		matching_users = User.objects.filter(
+			models.Q(nombre__icontains=student_search_query) |
+			models.Q(apellido__icontains=student_search_query) |
+			models.Q(email__icontains=student_search_query) |
+			models.Q(rut__icontains=student_search_query)
+		)
+		confirmed_requests = list(
+			PlanRequest.objects.filter(user__in=matching_users, estado=PlanRequestStatus.CONFIRMED)
+			.select_related("user", "plan")
+			.order_by("-updated_at")[:20]
+		)
+		logs_by_plan = {
+			log.plan_request_id: log.actor
+			for log in AdminActionLog.objects.filter(
+				action_type=AdminActionType.PLAN_CONFIRMED,
+				plan_request__in=confirmed_requests
+			).select_related("actor")
+		}
+		now = timezone.now()
+		for req in confirmed_requests:
+			approver = logs_by_plan.get(req.id)
+			approver_name = (approver.get_full_name() or approver.email) if approver else "Administración"
+			valid_until = _get_plan_valid_until(req)
+			total_limit = _get_plan_total_class_limit(req)
+			bonus_count = _get_plan_bonus_class_count(req.user, req)
+			used_count = _get_plan_used_class_count(req.user, req)
+			total_capacity = total_limit + bonus_count
+			remaining_count = max(total_capacity - used_count, 0)
+			is_expired = valid_until <= now
+
+			approved_students_search_results.append({
+				"student": req.user,
+				"plan": req.plan,
+				"periodo_display": req.get_periodo_display(),
+				"approved_at": req.updated_at,
+				"approver": approver_name,
+				"valid_until": valid_until,
+				"total_capacity": total_capacity,
+				"used_count": used_count,
+				"remaining_count": remaining_count,
+				"is_expired": is_expired,
+			})
+
+	selected_month_raw = request.GET.get("month") or request.POST.get("month")
+	selected_month_raw = (selected_month_raw or "").strip()
+	try:
+		selected_month = datetime.strptime(f"{selected_month_raw}-01", "%Y-%m-%d").date().replace(day=1)
+	except ValueError:
+		selected_month = timezone.localdate().replace(day=1)
+
+	recent_adjustments = list(
+		ClassCreditAdjustment.objects.select_related("user", "plan_request")
+		.order_by("-created_at")[:20]
+	)
+
+	context = {
+		"selected_month": selected_month,
+		"pending_plan_requests": pending_plan_requests,
+		"recent_confirmed_plans": recent_confirmed_plans,
+		"recent_adjustments": recent_adjustments,
+		"student_search_query": student_search_query,
+		"approved_students_search_results": approved_students_search_results,
+		"allow_pm_trial_classes": SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true",
+	}
+	context.update(_build_admin_overview_context(selected_month=selected_month))
+	return render(request, "core/dashboards/reception.html", context)
+
+
+@login_required
+@reception_required
 def admin_schedule_view(request):
 	import json
 	today = timezone.localdate()
@@ -2391,7 +2592,7 @@ def admin_plan_pricing_view(request):
 
 
 @login_required
-@admin_required
+@reception_required
 def admin_remove_attendee(request):
 	if request.method == "POST":
 		session_id = request.POST.get("session_id")
@@ -2468,7 +2669,7 @@ def admin_remove_attendee(request):
 
 
 @login_required
-@admin_required
+@reception_required
 def admin_confirm_single_class_payment(request):
 	if request.method == "POST":
 		session_id = request.POST.get("session_id")
@@ -2518,4 +2719,33 @@ def admin_confirm_single_class_payment(request):
 			messages.error(request, f"Ocurrió un error: {str(e)}")
 
 	return redirect("core:admin_schedule")
+
+
+def serve_media(request, path):
+	import os
+	from django.conf import settings
+	from django.http import Http404, HttpResponse
+	from django.views.static import serve
+
+	full_path = os.path.join(settings.MEDIA_ROOT, path)
+	if os.path.exists(full_path) and os.path.isfile(full_path):
+		return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+	ext = os.path.splitext(path)[1].lower()
+	if ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.pdf'):
+		filename = os.path.basename(path)
+		svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" width="700" height="450" viewBox="0 0 700 450">
+  <rect width="700" height="450" fill="#F7F3EA"/>
+  <rect x="24" y="24" width="652" height="402" rx="20" fill="#FFFFFF" stroke="#6F7A3E" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="350" cy="130" r="45" fill="#F7F3EA" stroke="#6F7A3E" stroke-width="2"/>
+  <text x="350" y="138" font-family="'Fraunces', Georgia, serif" font-size="30" font-weight="bold" fill="#3F5132" text-anchor="middle">📎</text>
+  <text x="350" y="215" font-family="'Fraunces', Georgia, serif" font-size="22" font-weight="600" fill="#3F5132" text-anchor="middle">Comprobante de Producción</text>
+  <text x="350" y="250" font-family="'Inter', sans-serif" font-size="14" fill="#6F7A3E" text-anchor="middle">El archivo no está presente en el almacenamiento local.</text>
+  <rect x="100" y="275" width="500" height="36" rx="10" fill="#F7F3EA"/>
+  <text x="350" y="298" font-family="monospace" font-size="12" fill="#212426" opacity="0.75" text-anchor="middle">Archivo: {filename}</text>
+  <text x="350" y="355" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#3F5132" text-anchor="middle">✓ Los nuevos comprobantes que subas localmente se guardarán normalmente en media/</text>
+</svg>"""
+		return HttpResponse(svg_content, content_type="image/svg+xml")
+
+	raise Http404(f"Media file {path} not found.")
 

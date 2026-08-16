@@ -31,4 +31,10 @@ urlpatterns = [
     path('cuentas/', include('accounts.urls')),
 ]
 
+from core.views import serve_media
+from django.urls import re_path
+
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve_media),
+]

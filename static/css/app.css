@@ -171,3 +171,10 @@ form .helptext {
     radial-gradient(circle at top left, rgba(239, 239, 171, 0.55), transparent 38%),
     linear-gradient(135deg, rgba(206, 202, 168, 0.35), rgba(81, 96, 77, 0.08));
 }
+
+.img-sharp {
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+

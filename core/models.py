@@ -119,10 +119,22 @@ class PlanRequest(models.Model):
 
 	@property
 	def comprobante_url(self) -> str | None:
-		if self.comprobante_path:
-			from django.conf import settings
-			return f"{settings.MEDIA_URL}{self.comprobante_path}"
-		return None
+		if not self.comprobante_path:
+			return None
+		path = str(self.comprobante_path).strip()
+		if not path:
+			return None
+		if path.startswith("http://") or path.startswith("https://"):
+			return path
+		if path.startswith("/media/"):
+			return path
+		if path.startswith("media/"):
+			return f"/{path}"
+		if path.startswith("/"):
+			return path
+		from django.conf import settings
+		media_url = settings.MEDIA_URL.rstrip('/')
+		return f"{media_url}/{path}"
 
 	def __str__(self) -> str:
 		return f"{self.user_id} - {self.plan.nombre} ({self.get_estado_display()})"
@@ -223,10 +235,22 @@ class SingleClassBooking(models.Model):
 
 	@property
 	def comprobante_url(self) -> str | None:
-		if self.comprobante_path:
-			from django.conf import settings
-			return f"{settings.MEDIA_URL}{self.comprobante_path}"
-		return None
+		if not self.comprobante_path:
+			return None
+		path = str(self.comprobante_path).strip()
+		if not path:
+			return None
+		if path.startswith("http://") or path.startswith("https://"):
+			return path
+		if path.startswith("/media/"):
+			return path
+		if path.startswith("media/"):
+			return f"/{path}"
+		if path.startswith("/"):
+			return path
+		from django.conf import settings
+		media_url = settings.MEDIA_URL.rstrip('/')
+		return f"{media_url}/{path}"
 
 	def __str__(self) -> str:
 		return f"{self.nombre} {self.apellido or ''} - {self.class_session_id}".strip()

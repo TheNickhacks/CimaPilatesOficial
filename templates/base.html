@@ -46,12 +46,15 @@
 
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}" />
+  <link rel="shortcut icon" type="image/png" href="{% static 'img/logo.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'img/logo.png' %}" />
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
 </head>
 
 <body class="bg-crema text-charcoal antialiased">
   <div class="bg-forest py-2 text-center text-xs font-semibold tracking-widest text-crema uppercase">
-    📢 Agenda tu clase suelta por solo $5.000 durante Agosto (Valor Valido Solo por Primera Clase en Horario AM y
+    📢 Agenda tu clase suelta por solo $5.000 durante Agosto (Valor Válido Solo por Primera Clase en Horario AM y
     Sábados)
   </div>
   <header class="sticky top-0 z-50 border-b border-forest/10 bg-crema/90 backdrop-blur-md" x-data="{ open: false }">

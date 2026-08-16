@@ -56,7 +56,7 @@
         <!-- Columna Derecha: Imagen Premium -->
         <div class="relative overflow-hidden rounded-[2.5rem] border border-olive/10 shadow-sm">
           <img src="{% static 'img/hero-reformer.png' %}" alt="Mujer en reformer"
-            class="h-full w-full max-h-[520px] object-cover object-center" />
+            class="h-full w-full max-h-[520px] object-cover object-center img-sharp" />
           <!-- Watermark logo exactly like in the picture -->
           <div class="absolute right-8 top-8 opacity-25 select-none pointer-events-none text-right">
             <p class="font-serif text-3xl uppercase tracking-[0.25em] text-forest leading-none">Cima</p>
@@ -113,9 +113,10 @@
   <section id="metodo" class="bg-white text-charcoal">
     <div class="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-24">
       <div class="grid gap-0 overflow-hidden rounded-[2.5rem] border border-forest/10 lg:grid-cols-2">
-        <!-- Izquierda: Imagen -->
-        <div class="h-[350px] lg:h-auto min-h-[350px]">
-          <img src="{% static 'img/studio-room.png' %}" alt="Sala de reformer" class="h-full w-full object-cover" />
+        <!-- Izquierda: Imagen Studio Room -->
+        <div class="relative w-full min-h-[380px] lg:min-h-[480px] h-full">
+          <img src="{% static 'img/studio-room.png' %}" alt="Sala de reformer Cima Pilates"
+            class="absolute inset-0 h-full w-full object-cover object-center img-sharp" />
         </div>
         <!-- Derecha: Texto y Contenido -->
         <div class="relative bg-crema p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
@@ -201,10 +202,12 @@
               class="italic text-olive">aquí</span>.</h2>
 
           <div class="mt-6 flex flex-wrap items-center gap-3">
-            <span class="inline-flex items-center gap-1 rounded bg-terracota px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
+            <span
+              class="inline-flex items-center gap-1 rounded bg-terracota px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
               Prueba $5.000 ☀️
             </span>
-            <span class="inline-flex items-center gap-1 rounded bg-forest/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-forest border border-forest/20 shadow-sm">
+            <span
+              class="inline-flex items-center gap-1 rounded bg-forest/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-forest border border-forest/20 shadow-sm">
               Suelta $9.990 🌿
             </span>
           </div>
@@ -220,10 +223,10 @@
             </a>
           </div>
         </div>
-        <!-- Derecha: Imagen -->
-        <div class="h-[350px] lg:h-auto min-h-[350px]">
-          <img src="{% static 'img/wellness-women.png' %}" alt="Alumna sonriente en pilates"
-            class="h-full w-full object-cover object-center" />
+        <!-- Derecha: Imagen Wellness Women -->
+        <div class="relative w-full min-h-[380px] lg:min-h-[480px] h-full">
+          <img src="{% static 'img/wellness-women.png' %}" alt="Alumna sonriente en Cima Pilates"
+            class="absolute inset-0 h-full w-full object-cover object-center img-sharp" />
         </div>
       </div>
     </div>
@@ -238,23 +241,23 @@
       <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
         <div class="overflow-hidden rounded-2xl shadow-sm aspect-square border border-forest/5">
           <img src="{% static 'img/studio-room.png' %}" alt="Reformer room"
-            class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+            class="h-full w-full object-cover img-sharp transition-transform duration-500 hover:scale-105" />
         </div>
         <div class="overflow-hidden rounded-2xl shadow-sm aspect-square border border-forest/5">
           <img src="{% static 'img/cta-studio.png' %}" alt="Candles detail"
-            class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+            class="h-full w-full object-cover img-sharp transition-transform duration-500 hover:scale-105" />
         </div>
         <div class="overflow-hidden rounded-2xl shadow-sm aspect-square border border-forest/5">
           <img src="{% static 'img/hero-reformer.png' %}" alt="Stretching woman"
-            class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+            class="h-full w-full object-cover img-sharp transition-transform duration-500 hover:scale-105" />
         </div>
         <div class="overflow-hidden rounded-2xl shadow-sm aspect-square border border-forest/5">
           <img src="{% static 'img/detail-reformer.png' %}" alt="Reformer equipment detail"
-            class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+            class="h-full w-full object-cover img-sharp transition-transform duration-500 hover:scale-105" />
         </div>
         <div class="overflow-hidden rounded-2xl shadow-sm aspect-square border border-forest/5">
           <img src="{% static 'img/wellness-women.png' %}" alt="Lit reformer room"
-            class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+            class="h-full w-full object-cover img-sharp transition-transform duration-500 hover:scale-105" />
         </div>
       </div>
     </div>
@@ -329,12 +332,16 @@
 
       <!-- Clases individuales (Prueba y Suelta) -->
       <div class="mt-6 grid gap-4 md:grid-cols-2">
-        <div class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-terracota/20 bg-white p-7 shadow-sm">
+        <div
+          class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-terracota/20 bg-white p-7 shadow-sm">
           <div>
-            <span class="inline-flex rounded-full bg-terracota/10 px-3 py-1 text-xs font-semibold text-terracota">Primera Clase · $5.000</span>
+            <span
+              class="inline-flex rounded-full bg-terracota/10 px-3 py-1 text-xs font-semibold text-terracota">Primera
+              Clase · $5.000</span>
             <h3 class="mt-3 font-serif text-2xl text-charcoal">Clase de Prueba</h3>
             <p class="mt-2 text-sm leading-relaxed text-charcoal/70">
-              Ideal para conocer nuestro estudio, probar las máquinas Reformer y experimentar la guiada personalizada (promoción única de 1 clase por persona).
+              Ideal para conocer nuestro estudio, probar las máquinas Reformer y experimentar la guiada personalizada
+              (promoción única de 1 clase por persona).
             </p>
           </div>
           <div class="flex items-center justify-between pt-2 border-t border-forest/5">
@@ -346,12 +353,15 @@
           </div>
         </div>
 
-        <div class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-forest/10 bg-white p-7 shadow-sm">
+        <div
+          class="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-forest/10 bg-white p-7 shadow-sm">
           <div>
-            <span class="inline-flex rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">Asistencia Flexible · $9.990</span>
+            <span class="inline-flex rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">Asistencia
+              Flexible · $9.990</span>
             <h3 class="mt-3 font-serif text-2xl text-charcoal">Clase Suelta</h3>
             <p class="mt-2 text-sm leading-relaxed text-charcoal/70">
-              Perfecta para entrenar de forma independiente, adaptar tus horarios y reservar clases puntuales según tu disponibilidad sin compromisos mensuales.
+              Perfecta para entrenar de forma independiente, adaptar tus horarios y reservar clases puntuales según tu
+              disponibilidad sin compromisos mensuales.
             </p>
           </div>
           <div class="flex items-center justify-between pt-2 border-t border-forest/5">
@@ -413,8 +423,7 @@
 
   <!-- VISÍTANOS -->
   <section id="visita" class="relative overflow-hidden">
-    <div class="absolute inset-0 bg-cover bg-center"
-      style="background-image:url('{% static 'img/banner_studio.png' %}');"> <!-- TODO: CAMBIAR IMAGEN -->
+    <div class="absolute inset-0 bg-cover bg-center" style="background-image:url('{% static 'img/cta-studio.png' %}');">
     </div>
     <div class="absolute inset-0 bg-forest/80"></div>
     <div class="relative mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
