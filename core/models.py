@@ -225,6 +225,7 @@ class SingleClassBooking(models.Model):
 		default=SingleClassType.PRUEBA,
 	)
 	estado = models.CharField(max_length=20, choices=SingleClassBookingStatus.choices, default=SingleClassBookingStatus.PENDING)
+	asistio = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 

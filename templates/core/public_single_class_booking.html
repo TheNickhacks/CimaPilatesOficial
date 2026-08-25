@@ -233,7 +233,7 @@
           <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Link de Pago (SumUp)</p>
           <p class="text-sm text-charcoal/75">Al presionar el botón a continuación, serás redirigida a SumUp para realizar el pago y al mismo tiempo registramos tu solicitud:</p>
           <button type="submit"
-                  data-url="{% if is_trial %}{{ single_class_plan.link_pago_prueba|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% else %}{{ single_class_plan.link_pago_suelta|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% endif %}"
+                  data-url="{% if is_trial or tipo_clase == 'prueba' %}{{ single_class_plan.link_pago_prueba|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% else %}{{ single_class_plan.link_pago_suelta|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% endif %}"
                   @click="if ($el.dataset.url) { window.open($el.dataset.url, '_blank'); }"
                   class="btn-booking-primary w-full"
                   {% if not selected_single_class_session %}disabled{% endif %}>

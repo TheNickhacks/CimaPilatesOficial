@@ -151,4 +151,39 @@ class SingleClassFlowTests(TestCase):
         res = self.client.get(reverse("core:admin_plan_pricing"))
         self.assertEqual(res.status_code, 403)
 
+    def test_payment_link_separation_for_trial_and_suelta(self):
+        from django.urls import reverse
+        PlanCatalog.objects.filter(es_clase_suelta=True).delete()
+        PlanCatalog.objects.create(
+            nombre="Clase Suelta / Prueba",
+            slug="clase-suelta",
+            icono="🌿",
+            clases_por_mes=1,
+            frecuencia="1 clase",
+            precio_mensual=9990,
+            precio_trimestral=0,
+            precio_semestral=0,
+            es_clase_suelta=True,
+            activo=True,
+            link_pago_prueba="https://pay.sumup.com/b2c/TEST_PRUEBA_LINK",
+            link_pago_suelta="https://pay.sumup.com/b2c/TEST_SUELTA_LINK",
+        )
+
+        # 1. Request Trial Class flow (?tipo=prueba)
+        res_prueba = self.client.get(f"{reverse('core:public_single_class_booking')}?tipo=prueba")
+        self.assertEqual(res_prueba.status_code, 200)
+        self.assertTrue(res_prueba.context["is_trial"])
+        self.assertEqual(res_prueba.context["tipo_clase"], "prueba")
+        self.assertContains(res_prueba, "https://pay.sumup.com/b2c/TEST_PRUEBA_LINK")
+        self.assertNotContains(res_prueba, "https://pay.sumup.com/b2c/TEST_SUELTA_LINK")
+
+        # 2. Request Single Class flow (?tipo=suelta)
+        res_suelta = self.client.get(f"{reverse('core:public_single_class_booking')}?tipo=suelta")
+        self.assertEqual(res_suelta.status_code, 200)
+        self.assertFalse(res_suelta.context["is_trial"])
+        self.assertEqual(res_suelta.context["tipo_clase"], "suelta")
+        self.assertContains(res_suelta, "https://pay.sumup.com/b2c/TEST_SUELTA_LINK")
+        self.assertNotContains(res_suelta, "https://pay.sumup.com/b2c/TEST_PRUEBA_LINK")
+
+
 

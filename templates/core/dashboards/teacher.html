@@ -301,12 +301,15 @@
                 <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases sueltas agendadas</p>
                 <div class="mt-4 space-y-4">
                   {% for booking in selected_teacher_session_single_bookings %}
-                    <div class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5">
+                    <label class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5 cursor-pointer">
                       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div class="flex items-start gap-4 w-full">
-                          <div class="mt-1 h-5 w-5 flex items-center justify-center rounded-full bg-sand/20 text-sand text-xs font-bold shrink-0">S</div>
+                          <input type="checkbox" name="present_single_booking_ids" value="{{ booking.id }}" {% if booking.asistio %}checked{% endif %} class="mt-1 h-5 w-5 rounded border-olive/30 text-olive focus:ring-olive/20 shrink-0" />
                           <div class="w-full">
-                            <p class="text-base font-medium text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
+                            <div class="flex items-center gap-2">
+                              <span class="inline-block rounded-full bg-olive/10 px-2.5 py-0.5 text-[10px] font-semibold text-olive uppercase tracking-wider">{{ booking.get_tipo_clase_display }}</span>
+                              <p class="text-base font-medium text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
+                            </div>
                             <p class="mt-1 text-sm text-charcoal/70">{{ booking.email }}{% if booking.telefono %} · {{ booking.telefono }}{% endif %}</p>
                             
                             <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs bg-ivory/40 p-3.5 rounded-xl border border-olive/5">
@@ -334,7 +337,7 @@
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </label>
                   {% endfor %}
                 </div>
               </div>

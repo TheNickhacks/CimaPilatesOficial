@@ -61,7 +61,7 @@ def _get_spanish_date_label(date_obj):
 
 def _get_calendar_navigation_start_date(today):
 	current_monday = today - timedelta(days=today.weekday())
-	if today.weekday() >= 5: # Sábado o Domingo
+	if today.weekday() == 6: # Domingo a las 00:00 el cambio de agenda pasa a la siguiente semana
 		return current_monday + timedelta(days=7)
 	return current_monday
 
@@ -570,11 +570,16 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 				}
 			)
 		student_reservations = capacity_maps["student_by_session"][session.id]
+		single_bookings = capacity_maps["single_class_by_session"][session.id]
 		present_count = sum(
 			1
 			for reservation in student_reservations
 			if attendance_by_session_user.get((session.id, reservation.user_id))
 			and attendance_by_session_user[(session.id, reservation.user_id)].present
+		) + sum(
+			1
+			for booking in single_bookings
+			if getattr(booking, "asistio", False)
 		)
 		schedule_days[-1]["slots"].append(
 			{
@@ -1269,6 +1274,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 			initial=initial_data
 		),
 		"tipo_clase": tipo_clase,
+		"is_trial": is_trial,
 		"class_title": class_title,
 		"class_price": class_price,
 		"class_description": class_description,
@@ -1652,6 +1658,11 @@ def teacher_dashboard(request):
 					for user_id in request.POST.getlist("present_user_ids")
 					if user_id
 				}
+				present_single_booking_ids = {
+					str(booking_id)
+					for booking_id in request.POST.getlist("present_single_booking_ids")
+					if booking_id
+				}
 				reservations = list(
 					ClassReservation.objects.filter(class_session=class_session).select_related("user")
 				)
@@ -1672,6 +1683,16 @@ def teacher_dashboard(request):
 						record.present = is_present
 						record.teacher = request.user
 						record.save(update_fields=["present", "teacher", "marked_at"])
+
+				single_bookings = list(
+					SingleClassBooking.objects.filter(class_session=class_session, estado__in=ACTIVE_SINGLE_CLASS_STATUSES)
+				)
+				for booking in single_bookings:
+					is_present = str(booking.id) in present_single_booking_ids
+					if booking.asistio != is_present:
+						booking.asistio = is_present
+						booking.save(update_fields=["asistio", "updated_at"])
+
 				messages.success(request, "La asistencia de la clase quedó actualizada.")
 				return redirect(f"{reverse('core:teacher_dashboard')}?month={selected_month_str}&session={class_session.id}#detalle-clase")
 
