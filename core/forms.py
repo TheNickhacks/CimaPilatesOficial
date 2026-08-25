@@ -71,7 +71,8 @@ class PlanRequestForm(forms.Form):
 	)
 	comprobante = forms.FileField(label="Subir comprobante", required=False)
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, *args, user=None, **kwargs):
+		self.user = user
 		super().__init__(*args, **kwargs)
 		field_classes = (
 			"mt-2 block w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 "
@@ -97,23 +98,29 @@ class PlanRequestForm(forms.Form):
 		return slug
 
 	def clean(self):
-		return super().clean()
+		cleaned_data = super().clean()
+		if self.user:
+			from django.utils import timezone
+			from datetime import timedelta
+			five_minutes_ago = timezone.now() - timedelta(minutes=5)
+			if PlanRequest.objects.filter(user=self.user, created_at__gte=five_minutes_ago).exists():
+				raise forms.ValidationError(
+					"Ya has enviado una solicitud de plan recientemente. Por favor espera al menos 5 minutos entre cada solicitud."
+				)
+		return cleaned_data
 
-	def save(self, user):
-		from django.utils import timezone
-		from datetime import timedelta
-		five_minutes_ago = timezone.now() - timedelta(minutes=5)
-		if PlanRequest.objects.filter(user=user, created_at__gte=five_minutes_ago).exists():
-			raise forms.ValidationError("Ya has enviado una solicitud de plan recientemente. Por favor espera al menos 5 minutos entre cada solicitud.")
-
+	def save(self, user=None):
+		target_user = user or self.user
+		if not target_user:
+			raise ValueError("User must be provided to save PlanRequestForm.")
 		comprobante = self.files.get("comprobante")
 		comprobante_path = None
 		if comprobante:
 			extension = Path(comprobante.name).suffix.lower()
-			filename = f"comprobantes/{user.id}/{uuid4().hex}{extension}"
+			filename = f"comprobantes/{target_user.id}/{uuid4().hex}{extension}"
 			comprobante_path = default_storage.save(filename, comprobante)
 		return PlanRequest.objects.create(
-			user=user,
+			user=target_user,
 			plan=self.plan,
 			periodo=self.cleaned_data["periodo"],
 			metodo_pago=self.cleaned_data["metodo_pago"],

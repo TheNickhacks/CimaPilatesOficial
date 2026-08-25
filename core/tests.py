@@ -186,4 +186,71 @@ class SingleClassFlowTests(TestCase):
         self.assertNotContains(res_suelta, "https://pay.sumup.com/b2c/TEST_PRUEBA_LINK")
 
 
+class PlanRenewalFlowTests(TestCase):
+    def setUp(self):
+        from accounts.models import UserRole
+        from core.forms import PlanRequestForm
+        from core.models import PlanBillingPeriod, PaymentMethod, PlanRequestStatus
+        self.student = User.objects.create_user(
+            email="alumna@example.com",
+            password="Password123!",
+            nombre="Valentina",
+            apellido="Prueba",
+            role=UserRole.STUDENT,
+        )
+        self.plan = PlanCatalog.objects.create(
+            nombre="Plan Reformer Estándar",
+            slug="reformer-estandar",
+            icono="🧘",
+            clases_por_mes=8,
+            frecuencia="2 clases/semana",
+            precio_mensual=50000,
+            precio_trimestral=135000,
+            precio_semestral=250000,
+            es_clase_suelta=False,
+            activo=True,
+            orden=1,
+        )
+        self.client.force_login(self.student)
+
+    def test_plan_request_form_rate_limit_handled_gracefully(self):
+        from core.forms import PlanRequestForm
+        from django.urls import reverse
+
+        # First request succeeds
+        form_data = {
+            "plan_slug": self.plan.slug,
+            "periodo": "monthly",
+            "metodo_pago": "presencial",
+            "notas": "Primera solicitud",
+        }
+        form1 = PlanRequestForm(data=form_data, user=self.student)
+        self.assertTrue(form1.is_valid(), form1.errors)
+        form1.save()
+
+        # Second request within 5 minutes should fail validation gracefully without 500 error
+        form2 = PlanRequestForm(data=form_data, user=self.student)
+        self.assertFalse(form2.is_valid())
+        self.assertIn("Ya has enviado una solicitud de plan recientemente", str(form2.errors))
+
+    def test_student_dashboard_preselects_active_plan(self):
+        from django.urls import reverse
+        from core.models import PlanRequest, PlanRequestStatus, PlanBillingPeriod
+
+        # Create active plan for student
+        active_req = PlanRequest.objects.create(
+            user=self.student,
+            plan=self.plan,
+            periodo=PlanBillingPeriod.QUARTERLY,
+            metodo_pago=PaymentMethod.IN_STUDIO,
+            estado=PlanRequestStatus.CONFIRMED,
+        )
+
+        res = self.client.get(reverse("core:student_dashboard"))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context["selected_plan"], self.plan)
+        self.assertEqual(res.context["selected_period"], PlanBillingPeriod.QUARTERLY)
+
+
+
 

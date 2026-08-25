@@ -1335,10 +1335,15 @@ def student_dashboard(request):
 	if selected_slug:
 		selected_plan = next((plan for plan in subscription_plans if plan.slug == selected_slug), None)
 	if selected_plan is None and subscription_plans:
-		selected_plan = subscription_plans[0]
+		if current_plan_request is not None:
+			selected_plan = current_plan_request.plan
+			if not request.GET.get("period"):
+				selected_period = current_plan_request.periodo
+		else:
+			selected_plan = subscription_plans[0]
 
 	if request.method == "POST":
-		plan_request_form = PlanRequestForm(request.POST, request.FILES)
+		plan_request_form = PlanRequestForm(request.POST, request.FILES, user=request.user)
 		if plan_request_form.is_valid():
 			request_kind = _build_plan_request_kind(request.user, plan_request_form.plan)
 			plan_request = plan_request_form.save(request.user)
@@ -1362,7 +1367,7 @@ def student_dashboard(request):
 		initial_data = {"periodo": selected_period}
 		if selected_plan is not None:
 			initial_data["plan_slug"] = selected_plan.slug
-		plan_request_form = PlanRequestForm(initial=initial_data)
+		plan_request_form = PlanRequestForm(initial=initial_data, user=request.user)
 		open_plan_modal = request.GET.get("open_plan") == "1"
 
 	current_plan_valid_until = None
