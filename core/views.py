@@ -1345,7 +1345,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		else "Clase individual suelta para asistir cuando quieras ($9.990)."
 	)
 
-	return {
+	context = {
 		"schedule_days": schedule_days,
 		"calendar_weeks": calendar_weeks,
 		"default_calendar_week_index": _get_default_calendar_week_index(
