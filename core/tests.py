@@ -235,7 +235,7 @@ class PlanRenewalFlowTests(TestCase):
 
     def test_student_dashboard_preselects_active_plan(self):
         from django.urls import reverse
-        from core.models import PlanRequest, PlanRequestStatus, PlanBillingPeriod
+        from core.models import PlanRequest, PlanRequestStatus, PlanBillingPeriod, PaymentMethod
 
         # Create active plan for student
         active_req = PlanRequest.objects.create(
@@ -250,6 +250,101 @@ class PlanRenewalFlowTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.context["selected_plan"], self.plan)
         self.assertEqual(res.context["selected_period"], PlanBillingPeriod.QUARTERLY)
+
+    def test_plan_renewal_does_not_deduct_previous_reservations(self):
+        from core.models import ClassSession, ClassReservation, PlanRequest, PlanRequestStatus, PlanBillingPeriod, PaymentMethod
+        from core.views import _get_plan_used_class_count
+
+        now = timezone.now()
+        session1 = ClassSession.objects.create(
+            starts_at=now + timedelta(days=2),
+            ends_at=now + timedelta(days=2, hours=1),
+            capacidad_maxima=4,
+        )
+        session2 = ClassSession.objects.create(
+            starts_at=now + timedelta(days=3),
+            ends_at=now + timedelta(days=3, hours=1),
+            capacidad_maxima=4,
+        )
+
+        # 1. Student creates a reservation before plan approval
+        ClassReservation.objects.create(
+            class_session=session1,
+            user=self.student,
+        )
+
+        # 2. Plan is created and confirmed now
+        plan_req = PlanRequest.objects.create(
+            user=self.student,
+            plan=self.plan,
+            periodo=PlanBillingPeriod.MONTHLY,
+            metodo_pago=PaymentMethod.IN_STUDIO,
+            estado=PlanRequestStatus.CONFIRMED,
+        )
+
+        # 3. Check used count for newly approved plan -> should be 0 (previous reservation not counted)
+        used_before = _get_plan_used_class_count(self.student, plan_req)
+        self.assertEqual(used_before, 0)
+
+        # 4. Student creates a reservation after plan approval
+        ClassReservation.objects.create(
+            class_session=session2,
+            user=self.student,
+        )
+
+        # 5. Check used count for approved plan -> should be 1
+        used_after = _get_plan_used_class_count(self.student, plan_req)
+        self.assertEqual(used_after, 1)
+
+    def test_transfer_settings_switch_and_secondary_account_notice(self):
+        from django.urls import reverse
+        from accounts.models import UserRole
+        from core.models import SystemSetting
+
+        admin_user = User.objects.create_user(
+            email="admin@cimapilates.cl",
+            password="Password123!",
+            nombre="Admin",
+            apellido="Cima",
+            role=UserRole.ADMIN,
+        )
+        self.client.force_login(admin_user)
+
+        # Switch to secondary transfer account
+        res_post = self.client.post(
+            reverse("core:admin_plan_pricing"),
+            {
+                "action": "update_transfer_settings",
+                "active_transfer_account": "secundaria",
+                "principal_nombre": "Cima Pilates SpA",
+                "principal_rut": "78434624-2",
+                "principal_banco": "Scotiabank",
+                "principal_tipo_cuenta": "Corriente",
+                "principal_numero_cuenta": "994170058",
+                "principal_email": "nnavarrogarrido02@gmail.com",
+                "secundaria_nombre": "Cima Pilates Emergencia SpA",
+                "secundaria_rut": "78434624-2",
+                "secundaria_banco": "Banco Estado",
+                "secundaria_tipo_cuenta": "Vista",
+                "secundaria_numero_cuenta": "1234567",
+                "secundaria_email": "alternativo@cimapilates.cl",
+            },
+        )
+        self.assertRedirects(res_post, reverse("core:admin_plan_pricing"))
+        self.assertEqual(SystemSetting.get_setting("active_transfer_account"), "secundaria")
+
+        # Now test student dashboard context displays secondary details + notice
+        self.client.force_login(self.student)
+        res_student = self.client.get(reverse("core:student_dashboard"))
+        self.assertEqual(res_student.status_code, 200)
+        self.assertTrue(res_student.context["is_secondary_transfer_account"])
+        self.assertEqual(
+            res_student.context["transfer_notice"],
+            "Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa.",
+        )
+        self.assertContains(res_student, "Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa.")
+        self.assertContains(res_student, "Banco Estado")
+
 
 
 

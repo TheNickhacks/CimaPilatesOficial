@@ -8,16 +8,144 @@
     <p class="mt-3 max-w-2xl leading-relaxed text-ivory/75">Acceso a configuraciones, estadísticas, tickets y procesos de anonimización / borrado de datos.</p>
   </div>
 
-  <!-- Selector Dinámico de Mes -->
-  <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[1.5rem] border border-olive/12 bg-card p-5">
-    <div>
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Filtro de Métricas</p>
-      <h2 class="text-xl font-serif text-charcoal font-light">Métricas de {{ selected_month|date:"F Y"|capfirst }}</h2>
+  <!-- 1. Buscador de Alumnas con Plan Aprobado -->
+  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Directorio de Alumnas</p>
+        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Buscador de alumnas con plan aprobado</h2>
+        <p class="mt-2 text-sm text-charcoal/70">Encuentra los datos de contacto, plan vigente, fecha de aprobación y el administrador aprobador.</p>
+      </div>
     </div>
-    <form method="get" class="flex items-center gap-3">
-      <input type="month" name="month" value="{{ selected_month|date:'Y-m' }}" onchange="this.form.submit()" class="rounded-2xl border border-olive/15 bg-ivory px-4 py-2.5 text-sm font-medium text-charcoal outline-none focus:border-olive focus:ring-2 focus:ring-olive/10" />
-      <button type="submit" class="rounded-full bg-olive px-5 py-2.5 text-xs font-semibold text-ivory shadow-sm hover:bg-olive/90 transition-all">Ver Mes</button>
+
+    <form method="get" class="mt-6 flex flex-col sm:flex-row gap-3">
+      <input type="text" name="student_search" value="{{ student_search_query }}" placeholder="Buscar por nombre, apellido, correo o RUT..." class="w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none focus:border-olive focus:ring-2 focus:ring-olive/10" />
+      <button type="submit" class="rounded-full bg-olive px-6 py-3 text-sm font-medium text-ivory shadow-sm transition-transform hover:-translate-y-0.5 shrink-0">Buscar Alumna</button>
+      {% if student_search_query %}
+        <a href="{% url 'core:admin_dashboard' %}" class="rounded-full border border-olive/25 px-5 py-3 text-sm font-medium text-olive text-center hover:bg-olive/5 shrink-0">Limpiar</a>
+      {% endif %}
     </form>
+
+    {% if student_search_query %}
+      <div class="mt-6">
+        {% if approved_students_search_results %}
+          <div class="overflow-x-auto rounded-2xl border border-olive/12 bg-ivory/50">
+            <table class="w-full text-left text-sm text-charcoal">
+              <thead class="bg-olive/10 text-xs font-medium uppercase tracking-luxe text-olive">
+                <tr>
+                  <th class="px-5 py-3.5">Alumna</th>
+                  <th class="px-5 py-3.5">Contacto</th>
+                  <th class="px-5 py-3.5">Plan Vigente</th>
+                  <th class="px-5 py-3.5">Clases Pendientes</th>
+                  <th class="px-5 py-3.5">Fecha Aprobación</th>
+                  <th class="px-5 py-3.5">Aprobado Por</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-olive/10">
+                {% for item in approved_students_search_results %}
+                  <tr class="hover:bg-olive/5">
+                    <td class="px-5 py-4 font-medium">{{ item.student.get_full_name|default:item.student.email }}</td>
+                    <td class="px-5 py-4 text-xs">
+                      <div>{{ item.student.email }}</div>
+                      <div class="text-charcoal/60">{{ item.student.telefono|default:"Sin teléfono" }}</div>
+                    </td>
+                    <td class="px-5 py-4 text-xs font-medium text-olive">
+                      <div>{{ item.plan.nombre }} ({{ item.periodo_display }})</div>
+                      {% if item.is_expired %}
+                        <span class="inline-block mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Plan vencido</span>
+                      {% else %}
+                        <span class="inline-block mt-1 text-[10px] text-charcoal/60">Vence: {{ item.valid_until|date:"d/m/Y" }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-5 py-4 text-xs">
+                      <span class="inline-flex items-center gap-1 rounded-full bg-olive/10 px-3 py-1 text-xs font-semibold text-olive">
+                        {{ item.remaining_count }} de {{ item.total_capacity }} pendientes
+                      </span>
+                    </td>
+                    <td class="px-5 py-4 text-xs text-charcoal/70">{{ item.approved_at|date:"d/m/Y H:i" }}</td>
+                    <td class="px-5 py-4 text-xs font-medium">{{ item.approver }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="rounded-2xl border border-dashed border-olive/12 bg-ivory/70 p-5 text-sm text-charcoal/70">No se encontraron alumnas con plan aprobado para "{{ student_search_query }}".</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- 2. Solicitudes de Planes: Validación y Activación -->
+  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
+    <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitudes de planes</p>
+    <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Validación y activación de planes</h2>
+    <p class="mt-3 text-sm text-charcoal/70">Al confirmar una solicitud, el plan queda vigente y la alumna podrá reservar clases.</p>
+
+    <div class="mt-6 space-y-3">
+      {% if pending_plan_requests %}
+        {% for request_item in pending_plan_requests %}
+          <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm font-medium text-charcoal">{{ request_item.user.get_full_name|default:request_item.user.email }}</p>
+                <p class="mt-1 text-xs text-charcoal/70">
+                  {{ request_item.user.email }}
+                  {% if request_item.user.telefono %}
+                    · <a href="https://wa.me/{{ request_item.user.telefono|cut:' '|cut:'+'|cut:'-' }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline" title="Enviar WhatsApp a {{ request_item.user.telefono }}">
+                        <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.76.459 3.474 1.333 4.988l-1.417 5.176 5.297-1.389c1.455.793 3.1 1.212 4.773 1.213h.004c5.505 0 9.989-4.478 9.99-9.984 0-2.667-1.037-5.174-2.923-7.062-1.885-1.887-4.392-2.926-7.057-2.926zm5.823 14.341c-.244.688-1.424 1.314-1.961 1.396-.511.078-1.168.113-1.88-.114-1.464-.467-3.238-1.579-4.66-3.003-1.282-1.284-2.296-2.846-2.731-4.225-.262-.83-.024-1.597.262-2.079.231-.389.518-.485.696-.485.178 0 .356.002.51.01.164.009.387-.062.605.463.227.546.772 1.88.84 2.018.067.137.112.299.022.477-.089.178-.133.289-.267.446-.134.156-.282.348-.403.468-.134.133-.274.278-.118.546.156.267.692 1.142 1.485 1.848 1.02.909 1.881 1.192 2.148 1.325.267.134.423.112.579-.067.156-.178.668-.78.847-1.047.178-.267.356-.223.601-.134.245.089 1.559.735 1.826.869.267.134.446.201.512.312.067.112.067.646-.177 1.334z"/></svg>
+                        {{ request_item.user.telefono }}
+                      </a>
+                  {% endif %}
+                  · {{ request_item.plan.nombre }} · {{ request_item.get_periodo_display }}
+                </p>
+                <p class="mt-1 text-xs text-charcoal/60">Estado: {{ request_item.get_estado_display }}</p>
+                {% if request_item.comprobante_url %}
+                  <div class="mt-2">
+                    <a href="{{ request_item.comprobante_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs text-olive font-semibold hover:underline">
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                      Ver comprobante de pago
+                    </a>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="confirm_plan" />
+                  <input type="hidden" name="plan_request_id" value="{{ request_item.id }}" />
+                  <button type="submit" class="btn-validate-orange">Confirmar</button>
+                </form>
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="reject_plan" />
+                  <input type="hidden" name="plan_request_id" value="{{ request_item.id }}" />
+                  <button type="submit" class="rounded-full border border-olive/25 px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-olive/5">Rechazar</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5 text-sm text-charcoal/70">No hay solicitudes pendientes por validar.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 3. Accesos Rápidos y Configuración Operativa -->
+  <div class="mt-8 grid gap-4 lg:grid-cols-2">
+    <a href="{% url 'core:admin_schedule' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda administrativa</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Validar clases y agendar manualmente</h2>
+      <p class="mt-3 text-sm text-charcoal/70">Revisa cupos, bloquea clases, confirma ocupación y agenda usuarias usando su correo.</p>
+    </a>
+    <a href="{% url 'core:admin_plan_pricing' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Precios de planes y transferencias</p>
+      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Editar valores con persistencia</h2>
+      <p class="mt-3 text-sm text-charcoal/70">Actualiza tarifas de planes y datos bancarios de transferencia con switch de cuenta secundaria.</p>
+    </a>
   </div>
 
   <!-- Switch de Configuración: Clases de Prueba PM -->
@@ -33,6 +161,19 @@
       <button type="submit" class="rounded-full px-5 py-2.5 text-xs font-semibold transition-all {% if allow_pm_trial_classes %}bg-emerald-700 text-ivory hover:bg-emerald-800{% else %}bg-amber-700 text-ivory hover:bg-amber-800{% endif %}">
         {% if allow_pm_trial_classes %}✓ Habilitadas en PM (Clic para Bloquear){% else %}🔒 Bloqueadas en PM (Clic para Habilitar){% endif %}
       </button>
+    </form>
+  </div>
+
+  <!-- 4. Indicadores y Métricas (Filtro de Mes, KPIs y Gráfico) -->
+  <!-- Selector Dinámico de Mes -->
+  <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[1.5rem] border border-olive/12 bg-card p-5">
+    <div>
+      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Filtro de Métricas</p>
+      <h2 class="text-xl font-serif text-charcoal font-light">Métricas e indicadores de {{ selected_month|date:"F Y"|capfirst }}</h2>
+    </div>
+    <form method="get" class="flex items-center gap-3">
+      <input type="month" name="month" value="{{ selected_month|date:'Y-m' }}" onchange="this.form.submit()" class="rounded-2xl border border-olive/15 bg-ivory px-4 py-2.5 text-sm font-medium text-charcoal outline-none focus:border-olive focus:ring-2 focus:ring-olive/10" />
+      <button type="submit" class="rounded-full bg-olive px-5 py-2.5 text-xs font-semibold text-ivory shadow-sm hover:bg-olive/90 transition-all">Ver Mes</button>
     </form>
   </div>
 
@@ -131,87 +272,7 @@
     </div>
   </div>
 
-  <!-- Buscador de Alumnas con Plan Aprobado -->
-  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Directorio de Alumnas</p>
-        <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Buscador de alumnas con plan aprobado</h2>
-        <p class="mt-2 text-sm text-charcoal/70">Encuentra los datos de contacto, plan vigente, fecha de aprobación y el administrador aprobador.</p>
-      </div>
-    </div>
-
-    <form method="get" class="mt-6 flex flex-col sm:flex-row gap-3">
-      <input type="text" name="student_search" value="{{ student_search_query }}" placeholder="Buscar por nombre, apellido, correo o RUT..." class="w-full rounded-2xl border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none focus:border-olive focus:ring-2 focus:ring-olive/10" />
-      <button type="submit" class="rounded-full bg-olive px-6 py-3 text-sm font-medium text-ivory shadow-sm transition-transform hover:-translate-y-0.5 shrink-0">Buscar Alumna</button>
-      {% if student_search_query %}
-        <a href="{% url 'core:admin_dashboard' %}" class="rounded-full border border-olive/25 px-5 py-3 text-sm font-medium text-olive text-center hover:bg-olive/5 shrink-0">Limpiar</a>
-      {% endif %}
-    </form>
-
-    {% if student_search_query %}
-      <div class="mt-6">
-        {% if approved_students_search_results %}
-          <div class="overflow-x-auto rounded-2xl border border-olive/12 bg-ivory/50">
-            <table class="w-full text-left text-sm text-charcoal">
-              <thead class="bg-olive/10 text-xs font-medium uppercase tracking-luxe text-olive">
-                <tr>
-                  <th class="px-5 py-3.5">Alumna</th>
-                  <th class="px-5 py-3.5">Contacto</th>
-                  <th class="px-5 py-3.5">Plan Vigente</th>
-                  <th class="px-5 py-3.5">Clases Pendientes</th>
-                  <th class="px-5 py-3.5">Fecha Aprobación</th>
-                  <th class="px-5 py-3.5">Aprobado Por</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-olive/10">
-                {% for item in approved_students_search_results %}
-                  <tr class="hover:bg-olive/5">
-                    <td class="px-5 py-4 font-medium">{{ item.student.get_full_name|default:item.student.email }}</td>
-                    <td class="px-5 py-4 text-xs">
-                      <div>{{ item.student.email }}</div>
-                      <div class="text-charcoal/60">{{ item.student.telefono|default:"Sin teléfono" }}</div>
-                    </td>
-                    <td class="px-5 py-4 text-xs font-medium text-olive">
-                      <div>{{ item.plan.nombre }} ({{ item.periodo_display }})</div>
-                      {% if item.is_expired %}
-                        <span class="inline-block mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Plan vencido</span>
-                      {% else %}
-                        <span class="inline-block mt-1 text-[10px] text-charcoal/60">Vence: {{ item.valid_until|date:"d/m/Y" }}</span>
-                      {% endif %}
-                    </td>
-                    <td class="px-5 py-4 text-xs">
-                      <span class="inline-flex items-center gap-1 rounded-full bg-olive/10 px-3 py-1 text-xs font-semibold text-olive">
-                        {{ item.remaining_count }} de {{ item.total_capacity }} pendientes
-                      </span>
-                    </td>
-                    <td class="px-5 py-4 text-xs text-charcoal/70">{{ item.approved_at|date:"d/m/Y H:i" }}</td>
-                    <td class="px-5 py-4 text-xs font-medium">{{ item.approver }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <p class="rounded-2xl border border-dashed border-olive/12 bg-ivory/70 p-5 text-sm text-charcoal/70">No se encontraron alumnas con plan aprobado para "{{ student_search_query }}".</p>
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="mt-8 grid gap-4 lg:grid-cols-2">
-    <a href="{% url 'core:admin_schedule' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Agenda administrativa</p>
-      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Validar clases y agendar manualmente</h2>
-      <p class="mt-3 text-sm text-charcoal/70">Revisa cupos, bloquea clases, confirma ocupación y agenda usuarias usando su correo.</p>
-    </a>
-    <a href="{% url 'core:admin_plan_pricing' %}" class="rounded-[2rem] border border-olive/12 bg-card p-8 transition-transform hover:-translate-y-1">
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Precios de planes</p>
-      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Editar valores con persistencia</h2>
-      <p class="mt-3 text-sm text-charcoal/70">Actualiza mensual, trimestral y semestral sin tocar el esquema operativo de reservas.</p>
-    </a>
-  </div>
-
+  <!-- 5. Seguimiento de Profesoras (Horas Efectivas por Mes) -->
   <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div>
@@ -262,65 +323,9 @@
     </div>
   </div>
 
-  <div class="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-    <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitudes de planes</p>
-      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Validación y activación</h2>
-      <p class="mt-3 text-sm text-charcoal/70">Al confirmar una solicitud, el plan queda vigente y la alumna podrá reservar clases.</p>
-
-      <div class="mt-6 space-y-3">
-        {% if pending_plan_requests %}
-          {% for request_item in pending_plan_requests %}
-            <div class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p class="text-sm font-medium text-charcoal">{{ request_item.user.get_full_name|default:request_item.user.email }}</p>
-                  <p class="mt-1 text-xs text-charcoal/70">
-                    {{ request_item.user.email }}
-                    {% if request_item.user.telefono %}
-                      · <a href="https://wa.me/{{ request_item.user.telefono|cut:' '|cut:'+'|cut:'-' }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline" title="Enviar WhatsApp a {{ request_item.user.telefono }}">
-                          <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.76.459 3.474 1.333 4.988l-1.417 5.176 5.297-1.389c1.455.793 3.1 1.212 4.773 1.213h.004c5.505 0 9.989-4.478 9.99-9.984 0-2.667-1.037-5.174-2.923-7.062-1.885-1.887-4.392-2.926-7.057-2.926zm5.823 14.341c-.244.688-1.424 1.314-1.961 1.396-.511.078-1.168.113-1.88-.114-1.464-.467-3.238-1.579-4.66-3.003-1.282-1.284-2.296-2.846-2.731-4.225-.262-.83-.024-1.597.262-2.079.231-.389.518-.485.696-.485.178 0 .356.002.51.01.164.009.387-.062.605.463.227.546.772 1.88.84 2.018.067.137.112.299.022.477-.089.178-.133.289-.267.446-.134.156-.282.348-.403.468-.134.133-.274.278-.118.546.156.267.692 1.142 1.485 1.848 1.02.909 1.881 1.192 2.148 1.325.267.134.423.112.579-.067.156-.178.668-.78.847-1.047.178-.267.356-.223.601-.134.245.089 1.559.735 1.826.869.267.134.446.201.512.312.067.112.067.646-.177 1.334z"/></svg>
-                          {{ request_item.user.telefono }}
-                        </a>
-                    {% endif %}
-                    · {{ request_item.plan.nombre }} · {{ request_item.get_periodo_display }}
-                  </p>
-                  <p class="mt-1 text-xs text-charcoal/60">Estado: {{ request_item.get_estado_display }}</p>
-                  {% if request_item.comprobante_url %}
-                    <div class="mt-2">
-                      <a href="{{ request_item.comprobante_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs text-olive font-semibold hover:underline">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                        </svg>
-                        Ver comprobante de pago
-                      </a>
-                    </div>
-                  {% endif %}
-                </div>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                  <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="confirm_plan" />
-                    <input type="hidden" name="plan_request_id" value="{{ request_item.id }}" />
-                    <button type="submit" class="btn-validate-orange">Confirmar</button>
-                  </form>
-                  <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="reject_plan" />
-                    <input type="hidden" name="plan_request_id" value="{{ request_item.id }}" />
-                    <button type="submit" class="rounded-full border border-olive/25 px-5 py-2.5 text-sm font-medium text-olive transition-colors hover:bg-olive/5">Rechazar</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          {% endfor %}
-        {% else %}
-          <p class="rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5 text-sm text-charcoal/70">No hay solicitudes pendientes por validar.</p>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="space-y-4">
+  <!-- 6. Ajustes y Operaciones Secundarias -->
+  <div class="mt-8 space-y-4">
+    <div class="grid gap-4 lg:grid-cols-2">
       <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
         <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Ajustes</p>
         <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Agregar o descontar clases a una alumna</h2>
@@ -360,7 +365,9 @@
           <button type="submit" class="w-full rounded-full border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100">Cancelar Plan Vigente</button>
         </form>
       </div>
+    </div>
 
+    <div class="grid gap-4 lg:grid-cols-2">
       <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
         <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Últimos movimientos</p>
         <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Ajustes recientes</h2>
@@ -425,7 +432,9 @@
           {% endif %}
         </div>
       </div>
+    </div>
 
+    <div class="grid gap-4 lg:grid-cols-3">
       <div class="rounded-[2rem] border border-olive/12 bg-card p-8">
         <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Notas privadas</p>
         <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Notas recientes de profesoras</h2>

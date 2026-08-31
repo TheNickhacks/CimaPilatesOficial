@@ -34,6 +34,118 @@
     </div>
   </div>
 
+  <!-- Configuración Persistente de Cuentas de Transferencia -->
+  <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8" x-data="{ activeAcc: '{{ active_transfer_account }}' }">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Cuentas bancarias</p>
+        <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Configuración de Cuentas de Transferencia</h2>
+        <p class="mt-1 text-sm text-charcoal/70">Administra los datos de la cuenta principal y secundaria. Elige cuál activar mediante el switch.</p>
+      </div>
+
+      <!-- Switch de Selección de Cuenta Activa -->
+      <div class="rounded-2xl border border-olive/15 bg-ivory p-2 flex items-center gap-2 shrink-0">
+        <span class="text-xs font-medium text-charcoal/70 px-2">Cuenta Activa:</span>
+        <button type="button" @click="activeAcc = 'principal'" :class="activeAcc === 'principal' ? 'bg-olive text-ivory shadow-sm' : 'bg-transparent text-charcoal/70 hover:text-charcoal'" class="rounded-xl px-4 py-2 text-xs font-semibold transition-all">
+          Principal
+        </button>
+        <button type="button" @click="activeAcc = 'secundaria'" :class="activeAcc === 'secundaria' ? 'bg-amber-700 text-ivory shadow-sm' : 'bg-transparent text-charcoal/70 hover:text-charcoal'" class="rounded-xl px-4 py-2 text-xs font-semibold transition-all">
+          Secundaria / Alternativa
+        </button>
+      </div>
+    </div>
+
+    <!-- Aviso de uso de cuenta secundaria -->
+    <div x-show="activeAcc === 'secundaria'" x-cloak class="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 font-medium flex items-center gap-2">
+      <svg class="h-5 w-5 shrink-0 fill-amber-600" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+      </svg>
+      <span><strong>Nota visible para usuarias:</strong> "Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa."</span>
+    </div>
+
+    <form method="post" class="mt-6 space-y-6">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_transfer_settings" />
+      <input type="hidden" name="active_transfer_account" :value="activeAcc" />
+
+      <div class="grid gap-6 lg:grid-cols-2">
+        <!-- Formulario Cuenta Principal -->
+        <div class="rounded-[1.5rem] border p-6 transition-all" :class="activeAcc === 'principal' ? 'border-olive bg-olive/5 shadow-sm' : 'border-olive/12 bg-ivory/40 opacity-80'">
+          <div class="flex items-center justify-between">
+            <h3 class="font-serif text-xl text-charcoal">1. Cuenta Principal</h3>
+            <span x-show="activeAcc === 'principal'" class="rounded-full bg-olive px-3 py-1 text-[10px] font-semibold text-ivory">ACTIVA</span>
+          </div>
+
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Titular / Nombre</label>
+              <input name="principal_nombre" type="text" value="{{ principal.nombre }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">RUT Titular</label>
+              <input name="principal_rut" type="text" value="{{ principal.rut }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Banco</label>
+              <input name="principal_banco" type="text" value="{{ principal.banco }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Tipo de Cuenta</label>
+              <input name="principal_tipo_cuenta" type="text" value="{{ principal.tipo_cuenta }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Número de Cuenta</label>
+              <input name="principal_numero_cuenta" type="text" value="{{ principal.numero_cuenta }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Correo Notificación</label>
+              <input name="principal_email" type="email" value="{{ principal.email }}" required class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario Cuenta Secundaria -->
+        <div class="rounded-[1.5rem] border p-6 transition-all" :class="activeAcc === 'secundaria' ? 'border-amber-600 bg-amber-50/50 shadow-sm' : 'border-olive/12 bg-ivory/40 opacity-80'">
+          <div class="flex items-center justify-between">
+            <h3 class="font-serif text-xl text-charcoal">2. Cuenta Secundaria / Alternativa</h3>
+            <span x-show="activeAcc === 'secundaria'" class="rounded-full bg-amber-700 px-3 py-1 text-[10px] font-semibold text-ivory">ACTIVA</span>
+          </div>
+
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Titular / Nombre</label>
+              <input name="secundaria_nombre" type="text" value="{{ secundaria.nombre }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="Ej: Cima Pilates SpA (Secundaria)" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">RUT Titular</label>
+              <input name="secundaria_rut" type="text" value="{{ secundaria.rut }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="Ej: 78434624-2" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Banco</label>
+              <input name="secundaria_banco" type="text" value="{{ secundaria.banco }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="Ej: Banco Estado" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Tipo de Cuenta</label>
+              <input name="secundaria_tipo_cuenta" type="text" value="{{ secundaria.tipo_cuenta }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="Ej: Corriente / Vista" />
+            </div>
+            <div>
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Número de Cuenta</label>
+              <input name="secundaria_numero_cuenta" type="text" value="{{ secundaria.numero_cuenta }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="Ej: 12345678" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Correo Notificación</label>
+              <input name="secundaria_email" type="email" value="{{ secundaria.email }}" class="mt-1 block w-full rounded-xl border border-olive/15 bg-card px-3 py-2 text-xs text-charcoal outline-none focus:border-olive" placeholder="correo@ejemplo.com" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" class="btn-primary">Guardar datos de transferencia</button>
+      </div>
+    </form>
+  </div>
+
   <div class="mt-8 grid gap-4 xl:grid-cols-2">
     {% for plan in plans %}
       <article class="rounded-[2rem] border border-olive/12 bg-card p-8">

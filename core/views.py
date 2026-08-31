@@ -38,14 +38,98 @@ from .models import (
 )
 
 
-TRANSFER_DETAILS = (
-	("Nombre", "Cima.Pilates SpA"),
-	("RUT", "78434624-2"),
-	("Banco", "Scotiabank Chile / Sudamericano"),
-	("Tipo de cuenta", "Corriente"),
-	("Numero de cuenta", "994170058"),
-	("Correo", "nnavarrogarrido02@gmail.com"),
-)
+DEFAULT_TRANSFER_ACCOUNT_PRINCIPAL = {
+	"nombre": "Cima.Pilates SpA",
+	"rut": "78434624-2",
+	"banco": "Scotiabank Chile / Sudamericano",
+	"tipo_cuenta": "Corriente",
+	"numero_cuenta": "994170058",
+	"email": "nnavarrogarrido02@gmail.com",
+}
+
+DEFAULT_TRANSFER_ACCOUNT_SECUNDARIA = {
+	"nombre": "Cima.Pilates SpA (Cuenta Secundaria)",
+	"rut": "78434624-2",
+	"banco": "Banco de Chile",
+	"tipo_cuenta": "Corriente",
+	"numero_cuenta": "000000000",
+	"email": "nnavarrogarrido02@gmail.com",
+}
+
+
+def _get_active_transfer_context():
+	active_acc = SystemSetting.get_setting("active_transfer_account", "principal").strip().lower()
+	if active_acc not in {"principal", "secundaria"}:
+		active_acc = "principal"
+
+	prefix = "transfer_secundaria_" if active_acc == "secundaria" else "transfer_principal_"
+	defaults = DEFAULT_TRANSFER_ACCOUNT_SECUNDARIA if active_acc == "secundaria" else DEFAULT_TRANSFER_ACCOUNT_PRINCIPAL
+
+	nombre = SystemSetting.get_setting(f"{prefix}nombre", defaults["nombre"])
+	rut = SystemSetting.get_setting(f"{prefix}rut", defaults["rut"])
+	banco = SystemSetting.get_setting(f"{prefix}banco", defaults["banco"])
+	tipo_cuenta = SystemSetting.get_setting(f"{prefix}tipo_cuenta", defaults["tipo_cuenta"])
+	numero_cuenta = SystemSetting.get_setting(f"{prefix}numero_cuenta", defaults["numero_cuenta"])
+	email = SystemSetting.get_setting(f"{prefix}email", defaults["email"])
+
+	details = (
+		("Nombre", nombre),
+		("RUT", rut),
+		("Banco", banco),
+		("Tipo de cuenta", tipo_cuenta),
+		("Número de cuenta", numero_cuenta),
+		("Correo", email),
+	)
+
+	is_secondary = (active_acc == "secundaria")
+	notice_message = (
+		"Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa."
+		if is_secondary
+		else ""
+	)
+
+	return {
+		"active_transfer_account": active_acc,
+		"transfer_details": details,
+		"is_secondary_transfer_account": is_secondary,
+		"transfer_notice": notice_message,
+	}
+
+
+def _get_full_transfer_settings_context():
+	active_acc = SystemSetting.get_setting("active_transfer_account", "principal").strip().lower()
+	if active_acc not in {"principal", "secundaria"}:
+		active_acc = "principal"
+
+	p_defaults = DEFAULT_TRANSFER_ACCOUNT_PRINCIPAL
+	s_defaults = DEFAULT_TRANSFER_ACCOUNT_SECUNDARIA
+
+	principal = {
+		"nombre": SystemSetting.get_setting("transfer_principal_nombre", p_defaults["nombre"]),
+		"rut": SystemSetting.get_setting("transfer_principal_rut", p_defaults["rut"]),
+		"banco": SystemSetting.get_setting("transfer_principal_banco", p_defaults["banco"]),
+		"tipo_cuenta": SystemSetting.get_setting("transfer_principal_tipo_cuenta", p_defaults["tipo_cuenta"]),
+		"numero_cuenta": SystemSetting.get_setting("transfer_principal_numero_cuenta", p_defaults["numero_cuenta"]),
+		"email": SystemSetting.get_setting("transfer_principal_email", p_defaults["email"]),
+	}
+
+	secundaria = {
+		"nombre": SystemSetting.get_setting("transfer_secundaria_nombre", s_defaults["nombre"]),
+		"rut": SystemSetting.get_setting("transfer_secundaria_rut", s_defaults["rut"]),
+		"banco": SystemSetting.get_setting("transfer_secundaria_banco", s_defaults["banco"]),
+		"tipo_cuenta": SystemSetting.get_setting("transfer_secundaria_tipo_cuenta", s_defaults["tipo_cuenta"]),
+		"numero_cuenta": SystemSetting.get_setting("transfer_secundaria_numero_cuenta", s_defaults["numero_cuenta"]),
+		"email": SystemSetting.get_setting("transfer_secundaria_email", s_defaults["email"]),
+	}
+
+	return {
+		"active_transfer_account": active_acc,
+		"principal": principal,
+		"secundaria": secundaria,
+		"is_secondary_transfer_account": (active_acc == "secundaria"),
+		"transfer_notice": "Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa." if active_acc == "secundaria" else "",
+	}
+
 
 DISPLAY_SCHEDULE_DAYS = 21
 TEACHER_DASHBOARD_DAYS = 21
@@ -220,15 +304,16 @@ def _get_plan_used_class_count(user, plan_request, now=None):
 	valid_until = _get_plan_valid_until(plan_request)
 	if valid_until <= now:
 		return 0
-	window_start = _to_session_storage_datetime(_ensure_aware_datetime(plan_request.created_at))
+	approval_time = _ensure_aware_datetime(plan_request.updated_at or plan_request.created_at)
 	window_end = _to_session_storage_datetime(_ensure_aware_datetime(valid_until))
 	return int(
 		ClassReservation.objects.filter(
 			user=user,
-			class_session__starts_at__gte=window_start,
+			created_at__gte=approval_time,
 			class_session__starts_at__lt=window_end,
 		).count()
 	)
+
 
 
 def _format_remaining_time(valid_until):
@@ -1279,9 +1364,10 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		"class_price": class_price,
 		"class_description": class_description,
 		"single_class_plan": PlanCatalog.objects.filter(activo=True, es_clase_suelta=True).first(),
-		"transfer_details": TRANSFER_DETAILS,
 		"open_single_class_form": selected_session is not None,
 	}
+	context.update(_get_active_transfer_context())
+	return context
 
 
 def home(request):
@@ -1395,7 +1481,6 @@ def student_dashboard(request):
 		"current_plan_remaining_label": current_plan_remaining_label,
 		"current_plan_expired": current_plan_expired,
 		"upgrade_plan": upgrade_plan,
-		"transfer_details": TRANSFER_DETAILS,
 		"plan_total_limit": _get_plan_total_class_limit(current_plan_request) if current_plan_request is not None else 0,
 		"plan_bonus_count": _get_plan_bonus_class_count(request.user, current_plan_request) if current_plan_request is not None else 0,
 		"plan_used_count": _get_plan_used_class_count(request.user, current_plan_request) if current_plan_request is not None else 0,
@@ -1404,6 +1489,7 @@ def student_dashboard(request):
 		context["plan_total_limit"] + context["plan_bonus_count"] - context["plan_used_count"],
 		0,
 	)
+	context.update(_get_active_transfer_context())
 	return render(request, "core/dashboards/student.html", context)
 
 
@@ -2558,62 +2644,97 @@ def admin_schedule_view(request):
 @login_required
 @admin_required
 def admin_plan_pricing_view(request):
-	if request.method == "POST" and request.POST.get("action") == "update_plan_prices":
-		try:
-			plan_id = int(request.POST.get("plan_id") or "")
-		except (TypeError, ValueError):
-			plan_id = None
-		if plan_id is None:
-			messages.error(request, "No encontramos el plan seleccionado.")
-			return redirect("core:admin_plan_pricing")
-		try:
-			with transaction.atomic():
-				plan = PlanCatalog.objects.select_for_update().get(pk=plan_id)
-				plan.precio_mensual = int(request.POST.get("precio_mensual") or plan.precio_mensual)
-				plan.precio_trimestral = int(request.POST.get("precio_trimestral") or plan.precio_trimestral)
-				plan.precio_semestral = int(request.POST.get("precio_semestral") or plan.precio_semestral)
-				if "link_pago" in request.POST:
-					plan.link_pago = (request.POST.get("link_pago") or "").strip() or None
-				if "link_pago_mensual" in request.POST:
-					plan.link_pago_mensual = (request.POST.get("link_pago_mensual") or "").strip() or None
-				if "link_pago_trimestral" in request.POST:
-					plan.link_pago_trimestral = (request.POST.get("link_pago_trimestral") or "").strip() or None
-				if "link_pago_semestral" in request.POST:
-					plan.link_pago_semestral = (request.POST.get("link_pago_semestral") or "").strip() or None
-				if "link_pago_prueba" in request.POST:
-					plan.link_pago_prueba = (request.POST.get("link_pago_prueba") or "").strip() or None
-				if "link_pago_suelta" in request.POST:
-					plan.link_pago_suelta = (request.POST.get("link_pago_suelta") or "").strip() or None
+	if request.method == "POST":
+		action = request.POST.get("action")
+		if action == "update_transfer_settings":
+			active_account = request.POST.get("active_transfer_account", "principal").strip().lower()
+			if active_account not in {"principal", "secundaria"}:
+				active_account = "principal"
+			SystemSetting.set_setting("active_transfer_account", active_account)
 
-				plan.save(update_fields=[
-					"precio_mensual", "precio_trimestral", "precio_semestral",
-					"link_pago", "link_pago_mensual", "link_pago_trimestral", "link_pago_semestral",
-					"link_pago_prueba", "link_pago_suelta", "updated_at"
-				])
-				
-				details_log = f"{plan.nombre}: ${plan.precio_mensual} / ${plan.precio_trimestral} / ${plan.precio_semestral}"
-				_log_admin_action(
-					request.user,
-					AdminActionType.PLAN_PRICE_UPDATED,
-					details=details_log,
-				)
-				messages.success(request, f"Los precios de {plan.nombre} fueron actualizados.")
-		except (PlanCatalog.DoesNotExist, ValueError):
-			messages.error(request, "No pudimos guardar los precios del plan.")
-		return redirect("core:admin_plan_pricing")
+			# Principal details
+			SystemSetting.set_setting("transfer_principal_nombre", (request.POST.get("principal_nombre") or "").strip())
+			SystemSetting.set_setting("transfer_principal_rut", (request.POST.get("principal_rut") or "").strip())
+			SystemSetting.set_setting("transfer_principal_banco", (request.POST.get("principal_banco") or "").strip())
+			SystemSetting.set_setting("transfer_principal_tipo_cuenta", (request.POST.get("principal_tipo_cuenta") or "").strip())
+			SystemSetting.set_setting("transfer_principal_numero_cuenta", (request.POST.get("principal_numero_cuenta") or "").strip())
+			SystemSetting.set_setting("transfer_principal_email", (request.POST.get("principal_email") or "").strip())
+
+			# Secundaria details
+			SystemSetting.set_setting("transfer_secundaria_nombre", (request.POST.get("secundaria_nombre") or "").strip())
+			SystemSetting.set_setting("transfer_secundaria_rut", (request.POST.get("secundaria_rut") or "").strip())
+			SystemSetting.set_setting("transfer_secundaria_banco", (request.POST.get("secundaria_banco") or "").strip())
+			SystemSetting.set_setting("transfer_secundaria_tipo_cuenta", (request.POST.get("secundaria_tipo_cuenta") or "").strip())
+			SystemSetting.set_setting("transfer_secundaria_numero_cuenta", (request.POST.get("secundaria_numero_cuenta") or "").strip())
+			SystemSetting.set_setting("transfer_secundaria_email", (request.POST.get("secundaria_email") or "").strip())
+
+			_log_admin_action(
+				request.user,
+				AdminActionType.PLAN_PRICE_UPDATED,
+				details=f"Cuentas de transferencia actualizadas. Cuenta activa: {active_account}",
+			)
+			acc_label = "Secundaria / Alternativa" if active_account == "secundaria" else "Principal"
+			messages.success(request, f"Datos de transferencias actualizados exitosamente. Cuenta activa actual: {acc_label}.")
+			return redirect("core:admin_plan_pricing")
+
+		if action == "update_plan_prices":
+			try:
+				plan_id = int(request.POST.get("plan_id") or "")
+			except (TypeError, ValueError):
+				plan_id = None
+			if plan_id is None:
+				messages.error(request, "No encontramos el plan seleccionado.")
+				return redirect("core:admin_plan_pricing")
+			try:
+				with transaction.atomic():
+					plan = PlanCatalog.objects.select_for_update().get(pk=plan_id)
+					plan.precio_mensual = int(request.POST.get("precio_mensual") or plan.precio_mensual)
+					plan.precio_trimestral = int(request.POST.get("precio_trimestral") or plan.precio_trimestral)
+					plan.precio_semestral = int(request.POST.get("precio_semestral") or plan.precio_semestral)
+					if "link_pago" in request.POST:
+						plan.link_pago = (request.POST.get("link_pago") or "").strip() or None
+					if "link_pago_mensual" in request.POST:
+						plan.link_pago_mensual = (request.POST.get("link_pago_mensual") or "").strip() or None
+					if "link_pago_trimestral" in request.POST:
+						plan.link_pago_trimestral = (request.POST.get("link_pago_trimestral") or "").strip() or None
+					if "link_pago_semestral" in request.POST:
+						plan.link_pago_semestral = (request.POST.get("link_pago_semestral") or "").strip() or None
+					if "link_pago_prueba" in request.POST:
+						plan.link_pago_prueba = (request.POST.get("link_pago_prueba") or "").strip() or None
+					if "link_pago_suelta" in request.POST:
+						plan.link_pago_suelta = (request.POST.get("link_pago_suelta") or "").strip() or None
+
+					plan.save(update_fields=[
+						"precio_mensual", "precio_trimestral", "precio_semestral",
+						"link_pago", "link_pago_mensual", "link_pago_trimestral", "link_pago_semestral",
+						"link_pago_prueba", "link_pago_suelta", "updated_at"
+					])
+					
+					details_log = f"{plan.nombre}: ${plan.precio_mensual} / ${plan.precio_trimestral} / ${plan.precio_semestral}"
+					_log_admin_action(
+						request.user,
+						AdminActionType.PLAN_PRICE_UPDATED,
+						details=details_log,
+					)
+					messages.success(request, f"Los precios de {plan.nombre} fueron actualizados.")
+			except (PlanCatalog.DoesNotExist, ValueError):
+				messages.error(request, "No pudimos guardar los precios del plan.")
+			return redirect("core:admin_plan_pricing")
 
 	plans = list(PlanCatalog.objects.order_by("orden", "id"))
+	context = {
+		"plans": plans,
+		"recent_price_updates": list(
+			AdminActionLog.objects.filter(action_type=AdminActionType.PLAN_PRICE_UPDATED)
+			.select_related("actor")
+			.order_by("-created_at")[:12]
+		),
+	}
+	context.update(_get_full_transfer_settings_context())
 	return render(
 		request,
 		"core/dashboards/admin_plans.html",
-		{
-			"plans": plans,
-			"recent_price_updates": list(
-				AdminActionLog.objects.filter(action_type=AdminActionType.PLAN_PRICE_UPDATED)
-				.select_related("actor")
-				.order_by("-created_at")[:12]
-			),
-		},
+		context,
 	)
 
 
