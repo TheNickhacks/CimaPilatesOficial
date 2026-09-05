@@ -134,7 +134,7 @@ def _get_full_transfer_settings_context():
 DISPLAY_SCHEDULE_DAYS = 21
 TEACHER_DASHBOARD_DAYS = 21
 BOOKING_OPEN_DELTA = timedelta(days=7)
-DEFAULT_CLASS_CAPACITY = 4
+DEFAULT_CLASS_CAPACITY = 8
 WEEKDAYS_ES_LIST = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 def _get_spanish_weekday(date_obj):
@@ -1217,7 +1217,7 @@ def _build_schedule_context(user, active_plan_request):
 		total_reservations = capacity_maps["total_by_session"][session.id]
 		if can_book and not is_booked and total_reservations >= session.capacidad_maxima:
 			can_book = False
-			blocked_reason = "Este bloque ya completo sus 4 cupos."
+			blocked_reason = "Este bloque ya completo sus 8 cupos."
 
 		schedule_days[-1]["slots"].append(
 			{
@@ -1306,7 +1306,7 @@ def _build_public_single_class_context(selected_session_id=None, booking_form=No
 		total_reservations = capacity_maps["total_by_session"][session.id]
 		if can_book and total_reservations >= session.capacidad_maxima:
 			can_book = False
-			blocked_reason = "Este bloque ya completo sus 4 cupos."
+			blocked_reason = "Este bloque ya completo sus 8 cupos."
 
 		if is_trial and not allow_pm_trials:
 			if local_start.weekday() < 5 and local_start.time() >= time(12, 0):
@@ -1532,7 +1532,7 @@ def student_schedule(request):
 							).count()
 						)
 						if current_reservations >= class_session.capacidad_maxima:
-							messages.error(request, "Este bloque ya completo sus 4 cupos disponibles.")
+							messages.error(request, "Este bloque ya completo sus 8 cupos disponibles.")
 							return redirect("core:student_schedule")
 
 						ClassReservation.objects.create(
@@ -1622,7 +1622,7 @@ def public_single_class_booking(request):
 						).count()
 					)
 					if total_reservations >= class_session.capacidad_maxima:
-						messages.error(request, "Este bloque ya completo sus 4 cupos disponibles.")
+						messages.error(request, "Este bloque ya completo sus 8 cupos disponibles.")
 						return redirect(f"{reverse('core:public_single_class_booking')}?tipo={tipo_clase}")
 
 					single_class_booking = booking_form.save()
@@ -1861,9 +1861,9 @@ def _build_admin_overview_context(selected_month=None):
 		if holidays_cl.is_holiday(current_day) or current_day.weekday() == 6:
 			pass
 		elif current_day.weekday() == 5:
-			total_capacity += 20 # 5 classes * 4 capacity
+			total_capacity += 5 * DEFAULT_CLASS_CAPACITY  # 5 classes * 8 capacity
 		else:
-			total_capacity += 40 # 10 classes * 4 capacity
+			total_capacity += 10 * DEFAULT_CLASS_CAPACITY  # 10 classes * 8 capacity
 		current_day += timedelta(days=1)
 		
 	# Deduct blocked sessions capacity

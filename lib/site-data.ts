@@ -61,7 +61,7 @@ export const METHOD_STEPS = [
   {
     step: "02",
     title: "Trabajo en reformer",
-    text: "Contamos con 4 camas reformer distribuidas en dos bloques horarios. El sistema de poleas, resortes y carro deslizante crea resistencia progresiva y asistida que protege tus articulaciones mientras activa la musculatura profunda.",
+    text: "Contamos con 8 camas reformer distribuidas en dos bloques horarios. El sistema de poleas, resortes y carro deslizante crea resistencia progresiva y asistida que protege tus articulaciones mientras activa la musculatura profunda.",
   },
   {
     step: "03",
@@ -101,7 +101,7 @@ export const GALLERY = [
   {
     src: "/img/studio-room.png",
     title: "La sala reformer",
-    text: "Cuatro camas reformer, luz natural y un espacio limpio pensado para concentrarte solo en ti.",
+    text: "Ocho camas reformer, luz natural y un espacio limpio pensado para concentrarte solo en ti.",
   },
   {
     src: "/img/detail-reformer.png",

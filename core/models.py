@@ -144,7 +144,7 @@ class ClassSession(models.Model):
 	id = models.BigAutoField(primary_key=True)
 	starts_at = models.DateTimeField(unique=True)
 	ends_at = models.DateTimeField()
-	capacidad_maxima = models.PositiveIntegerField(default=4)
+	capacidad_maxima = models.PositiveIntegerField(default=8)
 	is_blocked = models.BooleanField(default=False)
 	blocked_reason = models.TextField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)

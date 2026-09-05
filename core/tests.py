@@ -16,7 +16,7 @@ class SingleClassFlowTests(TestCase):
         self.session = ClassSession.objects.create(
             starts_at=start,
             ends_at=start + timedelta(hours=1),
-            capacidad_maxima=4,
+            capacidad_maxima=8,
         )
 
     def test_trial_class_limit_enforced(self):
@@ -66,7 +66,7 @@ class SingleClassFlowTests(TestCase):
         session2 = ClassSession.objects.create(
             starts_at=start2,
             ends_at=start2 + timedelta(hours=1),
-            capacidad_maxima=4,
+            capacidad_maxima=8,
         )
 
         # Book a suelta class for session2 (should succeed even if Maria already had a trial class)
@@ -105,7 +105,7 @@ class SingleClassFlowTests(TestCase):
         pm_session = ClassSession.objects.create(
             starts_at=next_monday,
             ends_at=next_monday + timedelta(hours=1),
-            capacidad_maxima=4,
+            capacidad_maxima=8,
         )
 
         form_data = {
@@ -259,12 +259,12 @@ class PlanRenewalFlowTests(TestCase):
         session1 = ClassSession.objects.create(
             starts_at=now + timedelta(days=2),
             ends_at=now + timedelta(days=2, hours=1),
-            capacidad_maxima=4,
+            capacidad_maxima=8,
         )
         session2 = ClassSession.objects.create(
             starts_at=now + timedelta(days=3),
             ends_at=now + timedelta(days=3, hours=1),
-            capacidad_maxima=4,
+            capacidad_maxima=8,
         )
 
         # 1. Student creates a reservation before plan approval
