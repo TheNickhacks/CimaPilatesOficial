@@ -1,3 +1,5 @@
+import json
+import secrets
 from calendar import monthrange
 from collections import defaultdict
 from datetime import datetime, time, timedelta, timezone as dt_timezone
@@ -23,12 +25,14 @@ from .models import (
 	ClassSession,
 	AdminActionLog,
 	AdminActionType,
+	PaymentMethod,
 	PlanBillingPeriod,
 	PlanCatalog,
 	PlanRequest,
 	PlanRequestStatus,
 	SingleClassBooking,
 	SingleClassBookingStatus,
+	SingleClassType,
 	SystemSetting,
 	TeacherHoursAdjustment,
 	TeacherSessionNote,
@@ -666,6 +670,24 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 			for booking in single_bookings
 			if getattr(booking, "asistio", False)
 		)
+		attendees_list = []
+		for reservation in student_reservations:
+			attendance_record = attendance_by_session_user.get((session.id, reservation.user_id))
+			attendees_list.append({
+				"type": "Reserva",
+				"name": reservation.user.get_full_name() or reservation.user.email,
+				"email": reservation.user.email,
+				"note": reservation.nota or "",
+				"present": attendance_record.present if attendance_record is not None else False,
+			})
+		for booking in single_bookings:
+			attendees_list.append({
+				"type": "Clase suelta",
+				"name": f"{booking.nombre or ''} {booking.apellido or ''}".strip() or booking.email,
+				"email": booking.email or "",
+				"note": getattr(booking, "notas", None) or "",
+				"present": getattr(booking, "asistio", False),
+			})
 		schedule_days[-1]["slots"].append(
 			{
 				"session": session,
@@ -682,6 +704,9 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 				"capacity_left": max(session.capacidad_maxima - capacity_maps["total_by_session"][session.id], 0),
 				"is_selected": selected_session_id == session.id,
 				"teacher_note_preview": (notes_by_session.get(session.id).note[:80] if notes_by_session.get(session.id) else ""),
+				"session_id": session.id,
+				"attendees_list": attendees_list,
+				"attendees_list_json": json.dumps(attendees_list, ensure_ascii=False, default=str),
 			}
 		)
 
@@ -2466,23 +2491,13 @@ def admin_schedule_view(request):
 			if not email or session_id is None:
 				messages.error(request, "Ingresa un correo y una clase válidos.")
 				return redirect("core:admin_schedule")
-			student = User.objects.filter(email__iexact=email).first()
-			if student is None:
-				messages.error(request, "No encontramos una usuaria con ese correo.")
+			if not nota:
+				messages.error(request, "Debes agregar una nota necesaria para agendar.")
 				return redirect("core:admin_schedule")
+			student = User.objects.filter(email__iexact=email).first()
 			try:
 				with transaction.atomic():
 					class_session = ClassSession.objects.select_for_update().get(pk=session_id)
-					if class_session.is_blocked:
-						active_plan = _get_active_plan_request(student)
-						if active_plan is None:
-							messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
-							return redirect("core:admin_schedule")
-						else:
-							nota = f"[Agendada en clase bloqueada con plan vendido] {nota or ''}".strip()
-					if ClassReservation.objects.filter(class_session=class_session, user=student).exists():
-						messages.info(request, "La usuaria ya está agendada en esta clase.")
-						return redirect("core:admin_schedule")
 					current_occupancy = ClassReservation.objects.filter(class_session=class_session).count() + SingleClassBooking.objects.filter(
 						class_session=class_session,
 						estado__in=ACTIVE_SINGLE_CLASS_STATUSES,
@@ -2490,15 +2505,57 @@ def admin_schedule_view(request):
 					if current_occupancy >= class_session.capacidad_maxima:
 						messages.error(request, "Este bloque ya completó sus cupos.")
 						return redirect("core:admin_schedule")
-					reservation = ClassReservation.objects.create(class_session=class_session, user=student, nota=nota)
-					_log_admin_action(
-						request.user,
-						AdminActionType.CLASS_BOOKED,
-						target_user=student,
-						class_session=class_session,
-						details=nota or f"Reserva manual #{reservation.id}",
-					)
-					messages.success(request, "La usuaria quedó agendada en la clase.")
+
+					if student is not None:
+						if class_session.is_blocked:
+							active_plan = _get_active_plan_request(student)
+							if active_plan is None:
+								messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
+								return redirect("core:admin_schedule")
+							else:
+								nota = f"[Agendada en clase bloqueada con plan vendido] {nota or ''}".strip()
+						if ClassReservation.objects.filter(class_session=class_session, user=student).exists():
+							messages.info(request, "La usuaria ya está agendada en esta clase.")
+							return redirect("core:admin_schedule")
+						reservation = ClassReservation.objects.create(class_session=class_session, user=student, nota=nota)
+						_log_admin_action(
+							request.user,
+							AdminActionType.CLASS_BOOKED,
+							target_user=student,
+							class_session=class_session,
+							details=f"Reserva manual #{reservation.id}: {nota}",
+						)
+						messages.success(request, "La usuaria quedó agendada en la clase.")
+					else:
+						if class_session.is_blocked:
+							messages.error(request, class_session.blocked_reason or "La clase está bloqueada por administración.")
+							return redirect("core:admin_schedule")
+						if SingleClassBooking.objects.filter(
+							class_session=class_session,
+							email__iexact=email,
+							estado__in=ACTIVE_SINGLE_CLASS_STATUSES,
+						).exists():
+							messages.info(request, "Ese correo ya está agendado en esta clase.")
+							return redirect("core:admin_schedule")
+						nombre_local = email.split("@")[0][:100] or "Cupo"
+						booking = SingleClassBooking.objects.create(
+							class_session=class_session,
+							nombre=nombre_local,
+							rut="99999999-9",
+							email=email,
+							telefono="000000000",
+							notas=nota,
+							metodo_pago=PaymentMethod.IN_STUDIO,
+							tipo_clase=SingleClassType.SUELTA,
+							estado=SingleClassBookingStatus.CONFIRMED,
+						)
+						_log_admin_action(
+							request.user,
+							AdminActionType.CLASS_BOOKED,
+							class_session=class_session,
+							details=f"Reserva por correo (cupo bypass) #{booking.id} - {email}: {nota}",
+						)
+						messages.success(request, f"Cupo apartado exitosamente para {email}.")
 			except ClassSession.DoesNotExist:
 				messages.error(request, "No encontramos la clase seleccionada.")
 			return redirect("core:admin_schedule")
@@ -2628,6 +2685,243 @@ def admin_schedule_view(request):
 	total_sessions_count = len(visible_sessions)
 	blocked_sessions_count = sum(1 for s in visible_sessions if s.is_blocked)
 
+	show_teacher_view = (request.GET.get("teacher_view") or "").strip().lower() in {"1", "true", "on", "yes", "si", "s"}
+	admin_teacher_view_context = {}
+	if show_teacher_view:
+		selected_session_id = request.GET.get("session") or request.POST.get("session_id")
+		try:
+			selected_session_id = int(selected_session_id) if selected_session_id else None
+		except (TypeError, ValueError):
+			selected_session_id = None
+		selected_month_raw = (request.GET.get("month") or "").strip()
+		try:
+			selected_month = datetime.strptime(f"{selected_month_raw}-01", "%Y-%m-%d").date().replace(day=1)
+		except ValueError:
+			selected_month = timezone.localdate().replace(day=1)
+
+		today = timezone.localdate()
+		_ensure_schedule_sessions(today, TEACHER_DASHBOARD_DAYS)
+		window_start = _to_session_storage_datetime(_combine_local_datetime(today, time(0, 0)))
+		window_end = _to_session_storage_datetime(
+			_combine_local_datetime(today + timedelta(days=TEACHER_DASHBOARD_DAYS), time(0, 0))
+		)
+		selected_month_start = selected_month.replace(day=1)
+		selected_month_str = f"{selected_month_start.year}-{selected_month_start.month:02d}"
+
+		end_date = today + timedelta(days=TEACHER_DASHBOARD_DAYS)
+		year_month_pairs = []
+		month_cursor = today.replace(day=1)
+		last_month = end_date.replace(day=1)
+		while month_cursor <= last_month:
+			year_month_pairs.append((month_cursor.year, month_cursor.month))
+			month_cursor = _add_months(_combine_local_datetime(month_cursor, time(0, 0)), 1).date()
+
+		selected_shift_kinds = [
+			TeacherShiftKind.AM,
+			TeacherShiftKind.PM,
+			TeacherShiftKind.SATURDAY,
+		]
+		monthly_shift_set = {(y, m, k) for (y, m) in year_month_pairs for k in selected_shift_kinds}
+		sessions = list(
+			ClassSession.objects.filter(starts_at__gte=window_start, starts_at__lt=window_end).order_by("starts_at")
+		)
+		teacher_placeholder = request.user
+		capacity_maps = _get_capacity_maps(sessions)
+		attendance_records = list(
+			ClassAttendance.objects.filter(class_session__in=sessions).select_related("user", "teacher")
+		)
+		attendance_by_session_user = {
+			(record.class_session_id, record.user_id): record
+			for record in attendance_records
+		}
+		notes_by_session = {
+			note.class_session_id: note
+			for note in TeacherSessionNote.objects.filter(class_session__in=sessions)
+		}
+		vista_days = []
+		for session in sessions:
+			local_start = _get_session_local_datetime(session.starts_at)
+			local_end = _get_session_local_datetime(session.ends_at)
+			if not _is_valid_schedule_slot(local_start, local_end):
+				continue
+			day_key = local_start.date()
+			if not vista_days or vista_days[-1]["date"] != day_key:
+				vista_days.append(
+					{
+						"date": day_key,
+						"weekday": _get_spanish_weekday(local_start),
+						"slots": [],
+					}
+				)
+			student_reservations = capacity_maps["student_by_session"][session.id]
+			single_bookings = capacity_maps["single_class_by_session"][session.id]
+			present_count = sum(
+				1
+				for reservation in student_reservations
+				if attendance_by_session_user.get((session.id, reservation.user_id))
+				and attendance_by_session_user[(session.id, reservation.user_id)].present
+			) + sum(
+				1
+				for booking in single_bookings
+				if getattr(booking, "asistio", False)
+			)
+			attendees_list = []
+			for reservation in student_reservations:
+				attendance_record = attendance_by_session_user.get((session.id, reservation.user_id))
+				attendees_list.append({
+					"type": "Reserva",
+					"name": reservation.user.get_full_name() or reservation.user.email,
+					"email": reservation.user.email,
+					"note": reservation.nota or "",
+					"present": attendance_record.present if attendance_record is not None else False,
+				})
+			for booking in single_bookings:
+				attendees_list.append({
+					"type": "Clase suelta",
+					"name": f"{booking.nombre or ''} {booking.apellido or ''}".strip() or booking.email,
+					"email": booking.email or "",
+					"note": getattr(booking, "notas", None) or "",
+					"present": getattr(booking, "asistio", False),
+				})
+			vista_days[-1]["slots"].append(
+				{
+					"session": session,
+					"date_label": _get_spanish_date_label(local_start),
+					"time_label": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
+					"time_key": local_start.strftime("%H:%M"),
+					"date": day_key,
+					"starts_at_local": local_start,
+					"ends_at_local": local_end,
+					"student_count": len(student_reservations),
+					"single_class_count": len(capacity_maps["single_class_by_session"][session.id]),
+					"total_count": capacity_maps["total_by_session"][session.id],
+					"attendance_present_count": present_count,
+					"capacity_left": max(session.capacidad_maxima - capacity_maps["total_by_session"][session.id], 0),
+					"is_selected": selected_session_id == session.id,
+					"teacher_note_preview": (notes_by_session.get(session.id).note[:80] if notes_by_session.get(session.id) else ""),
+					"session_id": session.id,
+					"attendees_list": attendees_list,
+					"attendees_list_json": json.dumps(attendees_list, ensure_ascii=False, default=str),
+				}
+			)
+
+		vista_calendar_weeks = _build_calendar_weeks(vista_days)
+		selected_session = next((session for session in sessions if session.id == selected_session_id), None)
+		if selected_session is None and sessions:
+			selected_session = sessions[0]
+		selected_attendance = []
+		selected_note = None
+		selected_stats = {}
+		if selected_session is not None:
+			selected_note = notes_by_session.get(selected_session.id)
+			selected_reservations = capacity_maps["student_by_session"][selected_session.id]
+			selected_user_ids = [reservation.user_id for reservation in selected_reservations]
+			user_attendance_totals = defaultdict(lambda: {"present": 0, "records": 0})
+			for record in ClassAttendance.objects.filter(user_id__in=selected_user_ids):
+				user_attendance_totals[record.user_id]["records"] += 1
+				if record.present:
+					user_attendance_totals[record.user_id]["present"] += 1
+			selected_stats = {
+				"student_count": len(selected_reservations),
+				"single_class_count": len(capacity_maps["single_class_by_session"][selected_session.id]),
+				"capacity_left": max(
+					selected_session.capacidad_maxima - capacity_maps["total_by_session"][selected_session.id],
+					0,
+				),
+				"total_count": capacity_maps["total_by_session"][selected_session.id],
+			}
+			for reservation in selected_reservations:
+				attendance_record = attendance_by_session_user.get((selected_session.id, reservation.user_id))
+				attendance_totals = user_attendance_totals[reservation.user_id]
+				selected_attendance.append(
+					{
+						"reservation": reservation,
+						"user": reservation.user,
+						"is_present": attendance_record.present if attendance_record is not None else False,
+						"marked_at": _get_safe_local_datetime(attendance_record.marked_at).strftime("%d/%m/%Y %H:%M")
+						if attendance_record is not None and _get_safe_local_datetime(attendance_record.marked_at) is not None
+						else "",
+						"attendance_present_total": attendance_totals["present"],
+						"attendance_record_total": attendance_totals["records"],
+					}
+				)
+
+		month_metrics = {
+			"scheduled_shift_day_count": 0,
+			"month_label": selected_month_start.strftime("%B %Y").capitalize(),
+			"effective_hours_label": _format_minutes_label(0),
+			"effective_cutoff_label": today.strftime("%d/%m/%Y"),
+			"adjustment_minutes": 0,
+			"adjustment_label": "",
+			"classes_with_students_count": 0,
+			"attendance_marked_count": 0,
+			"unique_students_count": 0,
+		}
+		month_start = selected_month_start
+		next_month = _add_months(_combine_local_datetime(month_start, time(0, 0)), 1).date()
+		month_window_start = _to_session_storage_datetime(_combine_local_datetime(month_start, time(0, 0)))
+		month_window_end = _to_session_storage_datetime(_combine_local_datetime(next_month, time(0, 0)))
+		all_month_sessions = [
+			s for s in sessions
+			if (
+				_get_session_local_datetime(s.starts_at).year == selected_month_start.year
+				and _get_session_local_datetime(s.starts_at).month == selected_month_start.month
+			)
+		]
+		if all_month_sessions:
+			all_month_capacity = _get_capacity_maps(all_month_sessions)
+			attendance_month_records = list(
+				ClassAttendance.objects.filter(class_session__in=all_month_sessions)
+			)
+			classes_with_students = 0
+			attendance_marked = 0
+			unique_students = set()
+			total_effective_minutes = 0
+			for s in all_month_sessions:
+				student_count = len(all_month_capacity["student_by_session"][s.id])
+				single_count = len(all_month_capacity["single_class_by_session"][s.id])
+				if student_count + single_count > 0:
+					classes_with_students += 1
+				local_start = _get_session_local_datetime(s.starts_at)
+				local_end = _get_session_local_datetime(s.ends_at)
+				if student_count + single_count > 0:
+					total_effective_minutes += _get_counted_session_minutes(local_start, local_end)
+				for res in all_month_capacity["student_by_session"][s.id]:
+					unique_students.add(res.user_id)
+					if attendance_by_session_user.get((s.id, res.user_id)) and attendance_by_session_user[(s.id, res.user_id)].present:
+						attendance_marked += 1
+				for bk in all_month_capacity["single_class_by_session"][s.id]:
+					if getattr(bk, "asistio", False):
+						attendance_marked += 1
+			month_metrics.update({
+				"classes_with_students_count": classes_with_students,
+				"attendance_marked_count": attendance_marked,
+				"unique_students_count": len(unique_students),
+				"effective_hours_label": _format_minutes_label(total_effective_minutes),
+			})
+
+		admin_teacher_view_context = {
+			"selected_month": selected_month,
+			"teacher_selected_month": selected_month_str,
+			"teacher_selected_month_label": selected_month_start.strftime("%B %Y").capitalize(),
+			"teacher_selected_shift_kinds": selected_shift_kinds,
+			"calendar_weeks": vista_calendar_weeks,
+			"default_calendar_week_index": _get_default_calendar_week_index(
+				vista_calendar_weeks,
+				preferred_session_id=selected_session.id if selected_session else None,
+			),
+			"selected_teacher_session": selected_session,
+			"selected_teacher_session_local_start": _get_session_local_datetime(selected_session.starts_at) if selected_session else None,
+			"selected_teacher_session_local_end": _get_session_local_datetime(selected_session.ends_at) if selected_session else None,
+			"selected_teacher_session_students": selected_attendance,
+			"selected_teacher_session_single_bookings": capacity_maps["single_class_by_session"][selected_session.id] if selected_session else [],
+			"selected_teacher_note": selected_note.note if selected_note else "",
+			"selected_teacher_stats": selected_stats,
+			"teacher_month_metrics": month_metrics,
+			"teacher_shift_choices": TeacherShiftKind.choices,
+			"profile_photo_url": None,
+		}
+
 	return render(
 		request,
 		"core/dashboards/admin_schedule.html",
@@ -2637,6 +2931,9 @@ def admin_schedule_view(request):
 			"schedule_days": schedule_days,
 			"blocked_sessions_count": blocked_sessions_count,
 			"total_sessions_count": total_sessions_count,
+			"show_teacher_view": show_teacher_view,
+			"admin_teacher_view": admin_teacher_view_context,
+			"admin_shift_choices": TeacherShiftKind.choices,
 		},
 	)
 

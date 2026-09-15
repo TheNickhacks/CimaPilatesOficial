@@ -2,6 +2,7 @@
 {% block title %}Agenda Administrativa | Cima Pilates{% endblock %}
 {% block content %}
 <section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+  {% if not show_teacher_view %}
   <div class="rounded-[2rem] bg-charcoal p-8 text-ivory md:p-10">
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
@@ -11,6 +12,7 @@
       </div>
       <div class="flex flex-col gap-3 sm:flex-row">
         <a href="{% url 'core:admin_dashboard' %}" class="rounded-full border border-ivory/25 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">Volver al dashboard</a>
+        <a href="?teacher_view=1" class="rounded-full bg-olive px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-olive/90">👩‍🏫 Switch / Vista profesor</a>
         <a href="{% url 'core:admin_plan_pricing' %}" class="rounded-full bg-ivory px-5 py-2.5 text-sm font-medium text-charcoal transition-colors hover:bg-butter">Editar precios</a>
       </div>
     </div>
@@ -33,7 +35,213 @@
       <p class="mt-2 text-sm text-charcoal/70">Agendar, bloquear o liberar desde el calendario.</p>
     </div>
   </div>
+  {% else %}
+  <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-butter">Switch / Vista profesor</p>
+        <h1 class="mt-4 font-serif text-4xl font-light leading-tight">Vista de Profesor</h1>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <a href="{% url 'core:admin_schedule' %}" class="rounded-full border border-ivory/30 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/10">← Volver a agenda admin</a>
+        <a href="{% url 'core:admin_dashboard' %}" class="rounded-full bg-ivory/10 px-5 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ivory/20 border border-ivory/20">Dashboard</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
+  {% if show_teacher_view and admin_teacher_view %}
+  {% with admin_teacher_view as ctx %}
+  <section class="mx-auto max-w-7xl px-5 py-12 lg:px-8" x-data="{
+      activeWeek: {{ ctx.default_calendar_week_index|default:0 }},
+      detailOpen: false,
+      selectedSlot: null,
+      openSlot(el) {
+        const sessionId = el.dataset.sessionId || '';
+        if (this.detailOpen && this.selectedSlot && this.selectedSlot.id === sessionId) {
+          this.closePanel();
+          return;
+        }
+        this.selectedSlot = {
+          id: sessionId,
+          sessionId: sessionId,
+          dayLabel: el.dataset.dayLabel || '',
+          timeLabel: el.dataset.timeLabel || '',
+          capacityLabel: el.dataset.capacityLabel || '',
+          availableLabel: el.dataset.availableLabel || '',
+          reservationCount: el.dataset.reservationCount || '',
+          attendees: JSON.parse(el.dataset.attendees || '[]'),
+        };
+        this.detailOpen = true;
+        window.setTimeout(() => {
+          const el = document.getElementById('teacher-detail-panel');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      },
+      closePanel() {
+        this.detailOpen = false;
+        this.selectedSlot = null;
+      }
+    }">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vista calendario · Profesor</p>
+        <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Agenda semanal Profesores</h2>
+        <p class="mt-2 text-sm text-charcoal/65">Haz clic sobre un bloque para abrir su ficha y leer las notas / observaciones agregadas al agendar.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% for week in ctx.calendar_weeks %}
+          {% if forloop.counter <= 3 %}
+            <button
+              type="button"
+              @click="activeWeek = {{ forloop.counter0 }}"
+              :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-card text-charcoal border-olive/15 hover:bg-olive/5'"
+              class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+            >
+              Semana {{ forloop.counter }} · {{ week.label }}
+            </button>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {% for week in ctx.calendar_weeks %}
+      {% if forloop.counter <= 3 %}
+        <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak class="mt-6">
+        <div class="overflow-x-auto rounded-[2rem] border border-olive/12 bg-card shadow-sm">
+          <div class="min-w-[1120px]">
+            <div class="grid grid-cols-[92px_repeat(7,minmax(150px,1fr))]">
+              <div class="border-b border-r border-olive/10 bg-olive px-4 py-5 text-xs font-medium uppercase tracking-luxe text-butter">Hora</div>
+              {% for day in week.days %}
+                <div class="border-b border-olive/10 bg-olive px-4 py-5 text-ivory {% if not forloop.last %}border-r{% endif %}">
+                  <p class="text-xs font-medium uppercase tracking-luxe text-butter">{{ day.date|date:"D" }}</p>
+                  <p class="mt-2 font-serif text-2xl">{{ day.date|date:"d" }}</p>
+                  <p class="mt-1 text-sm text-ivory/75">{{ day.date|date:"d/m" }}</p>
+                  {% if day.is_holiday %}
+                    <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Feriado</p>
+                    <p class="mt-1 text-[11px] text-ivory/65">{{ day.holiday_name }}</p>
+                  {% endif %}
+                </div>
+              {% endfor %}
+
+              {% for row in week.time_rows %}
+                <div class="border-r border-b border-olive/10 bg-ivory/60 px-3 py-4 text-sm font-medium text-charcoal">{{ row.time_key }}</div>
+                {% for slot in row.cells %}
+                  <div class="border-b border-olive/10 p-2 {% if not forloop.last %}border-r{% endif %}">
+                    {% if slot %}
+                      <button
+                        type="button"
+                        @click="openSlot($el)"
+                        data-session-id="{{ slot.session.id }}"
+                        data-day-label="{{ slot.date_label }}"
+                        data-time-label="{{ slot.time_label }}"
+                        data-capacity-label="{{ slot.session.capacidad_maxima }}"
+                        data-available-label="{{ slot.capacity_left }}"
+                        data-reservation-count="{{ slot.total_count }}"
+                        data-attendees='{{ slot.attendees_list_json }}'
+                        class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35"
+                      >
+                        <div class="flex flex-col gap-2">
+                          <div>
+                            <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                            <p class="mt-1 text-xs text-charcoal/60">{{ slot.ends_at_local|date:"H:i" }}</p>
+                          </div>
+                          <span class="inline-flex w-fit max-w-full rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none bg-olive text-ivory">
+                            Agenda
+                          </span>
+                        </div>
+                        <div class="mt-3 text-xs text-charcoal/65">
+                          <p>{{ slot.capacity_left }} cupos libres</p>
+                          <p>{{ slot.student_count }} alumna(s) · {{ slot.single_class_count }} suelta(s)</p>
+                        </div>
+                      </button>
+                    {% else %}
+                      <div class="h-full min-h-[92px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    <div id="teacher-detail-panel" x-show="detailOpen && selectedSlot" x-cloak class="mt-6">
+      <div class="rounded-[2rem] border border-olive/12 bg-card p-6 shadow-sm">
+        <div class="flex flex-col gap-4 border-b border-olive/10 pb-5 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clase seleccionada</p>
+            <h3 class="mt-3 font-serif text-3xl text-charcoal" x-text="selectedSlot ? selectedSlot.timeLabel : ''"></h3>
+            <p class="mt-2 text-sm text-charcoal/65" x-text="selectedSlot ? selectedSlot.dayLabel : ''"></p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+                <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Cupos lib.</p>
+                <p class="mt-2 font-serif text-2xl text-charcoal" x-text="selectedSlot ? selectedSlot.availableLabel : '0'"></p>
+              </div>
+              <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+                <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Capacidad</p>
+                <p class="mt-2 font-serif text-2xl text-charcoal" x-text="selectedSlot ? selectedSlot.capacityLabel : '0'"></p>
+              </div>
+              <div class="rounded-[1.2rem] border border-olive/10 bg-ivory/70 px-4 py-3">
+                <p class="text-[11px] font-medium uppercase tracking-luxe text-olive-gold">Agendadas</p>
+                <p class="mt-2 font-serif text-2xl text-charcoal" x-text="selectedSlot ? selectedSlot.reservationCount : '0'"></p>
+              </div>
+            </div>
+            <button type="button" @click="closePanel()" class="rounded-full border border-olive/15 px-4 py-2 text-sm font-medium text-charcoal/70 transition-colors hover:bg-olive/5 self-start">Cerrar</button>
+          </div>
+        </div>
+
+        <div class="mt-6 space-y-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-2 rounded-full bg-olive/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-olive">📝 Asistentes · Notas / Observaciones</span>
+            </div>
+            <div class="mt-4 space-y-3">
+              <template x-if="!selectedSlot || !selectedSlot.attendees || selectedSlot.attendees.length === 0">
+                <div class="rounded-[1.5rem] border border-dashed border-olive/12 bg-ivory/50 p-6 text-sm text-charcoal/70">
+                  Esta clase aún no tiene personas agendadas.
+                </div>
+              </template>
+              <template x-for="attendee in (selectedSlot ? selectedSlot.attendees : [])" :key="attendee.type + '-' + attendee.email">
+                <div class="rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-base font-medium text-charcoal" x-text="attendee.name || attendee.email"></p>
+                        <span class="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                              :class="attendee.type === 'Clase suelta' ? 'bg-charcoal/5 text-charcoal ring-1 ring-olive/15' : 'bg-olive/10 text-olive'"
+                              x-text="attendee.type">
+                        </span>
+                      </div>
+                      <p class="mt-1 text-sm text-charcoal/70" x-text="attendee.email"></p>
+                      <p class="mt-1 text-xs text-charcoal/50" x-show="attendee.present" style="display:none;">Asistencia marcada · Presente</p>
+                    </div>
+                  </div>
+                  <template x-if="attendee.note">
+                    <div class="mt-4 rounded-2xl border border-olive/20 bg-olive/10 px-5 py-4">
+                      <p class="text-xs font-semibold uppercase tracking-luxe text-olive-gold">📝 NOTA DE AGENDA / OBSERVACIÓN (agendamiento)</p>
+                      <p class="mt-2 text-[15px] leading-relaxed text-charcoal whitespace-pre-wrap break-words" x-text="attendee.note"></p>
+                    </div>
+                  </template>
+                  <template x-if="!attendee.note">
+                    <p class="mt-3 text-sm italic text-charcoal/50">Sin nota / observación agregada en el agendamiento.</p>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endwith %}
+  {% endif %}
+
+  {% if not show_teacher_view %}
   <div
     class="mt-8"
     x-data="{
@@ -271,13 +479,14 @@
               <input type="hidden" name="action" value="admin_book_user" />
               <input type="hidden" name="session_id" :value="selectedSlot ? selectedSlot.sessionId : ''" />
               <div>
-                <label class="text-sm font-medium text-charcoal">Correo de la usuaria</label>
-                <p class="mt-1 text-xs text-charcoal/60">Permite agendar manualmente. Si la clase está bloqueada, usuarias con Plan Vendido confirmado sí podrán ser agendadas.</p>
-                <input name="user_email" type="email" required class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="alumna@correo.com" />
+                <label class="text-sm font-medium text-charcoal">Correo <span class="text-red-500">*</span></label>
+                <p class="mt-1 text-xs text-charcoal/60">Ingresa solo el correo para apartar el cupo. Si la usuaria no, está registrada el cupo se aparta directamente con el correo.</p>
+                <input name="user_email" type="email" required class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="cualquier@correo.com" />
               </div>
               <div>
-                <label class="text-sm font-medium text-charcoal">Nota interna</label>
-                <textarea name="nota" rows="4" class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="Opcional"></textarea>
+                <label class="text-sm font-medium text-charcoal">Nota de Agenda <span class="text-red-500">*</span></label>
+                <p class="mt-1 text-xs text-charcoal/60">Campo obligatorio.</p>
+                <textarea name="nota" rows="4" required class="mt-2 block w-full rounded-[1.5rem] border border-olive/15 bg-ivory px-4 py-3 text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10" placeholder="Ej: agenda por teléfono, visita sin plan, cupo por administración, etc."></textarea>
               </div>
               <button type="submit" class="btn-booking-primary w-full">Agendar usuaria</button>
             </form>
@@ -308,5 +517,6 @@
       </div>
     </div>
   </div>
+  {% endif %}
 </section>
 {% endblock %}
