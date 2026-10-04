@@ -8,6 +8,64 @@
     <p class="mt-3 max-w-2xl leading-relaxed text-ivory/75">Acceso a configuraciones, estadísticas, tickets y procesos de anonimización / borrado de datos.</p>
   </div>
 
+  <!-- Banner de Activación Directa de Planes (Admin) -->
+  <div class="mt-8 rounded-[2rem] border border-forest/20 bg-gradient-to-br from-forest via-olive to-forest/90 p-8 text-crema shadow-xl relative overflow-hidden">
+    <div class="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/5 blur-2xl pointer-events-none"></div>
+    
+    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full border border-butter/30 bg-butter/20 px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-butter shadow-sm">
+          ⚡ Activación Directa Presencial
+        </span>
+        <h2 class="mt-3 font-serif text-2xl font-light leading-tight sm:text-3xl text-crema">
+          Activar Plan a Alumna sin Solicitud
+        </h2>
+        <p class="mt-1 max-w-xl text-xs text-crema/80 leading-relaxed">
+          Ingresa el correo electrónico de la alumna y selecciona el plan que adquirió presencialmente. El plan quedará activado de inmediato.
+        </p>
+      </div>
+    </div>
+
+    <form method="post" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="direct_activate_plan" />
+      
+      <div>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-sand">Correo de la Alumna</label>
+        <input type="email" name="student_email" placeholder="alumna@gmail.com" required
+          class="mt-1.5 w-full rounded-2xl border border-crema/20 bg-white/10 px-4 py-3 text-sm text-white placeholder-crema/50 outline-none transition focus:border-butter focus:bg-white/20 focus:ring-2 focus:ring-butter/20" />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-sand">Seleccionar Plan</label>
+        <select name="plan_id" required
+          class="mt-1.5 w-full rounded-2xl border border-crema/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-butter focus:bg-white/20 focus:ring-2 focus:ring-butter/20">
+          <option value="" disabled selected class="text-charcoal">Elige un plan...</option>
+          {% for p in all_catalog_plans %}
+            <option value="{{ p.id }}" class="text-charcoal">{{ p.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-sand">Período de Pago</label>
+        <select name="periodo" required
+          class="mt-1.5 w-full rounded-2xl border border-crema/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-butter focus:bg-white/20 focus:ring-2 focus:ring-butter/20">
+          <option value="monthly" class="text-charcoal">Mensual</option>
+          <option value="quarterly" class="text-charcoal">Trimestral</option>
+          <option value="semester" class="text-charcoal">Semestral</option>
+        </select>
+      </div>
+
+      <div>
+        <button type="submit"
+          class="w-full rounded-2xl bg-butter px-6 py-3.5 text-xs font-extrabold uppercase tracking-wider text-charcoal shadow-md transition-all hover:bg-white hover:scale-[1.02]">
+          ⚡ Activar Plan Ahora
+        </button>
+      </div>
+    </form>
+  </div>
+
   <!-- 1. Buscador de Alumnas con Plan Aprobado -->
   <div class="mt-8 rounded-[2rem] border border-olive/12 bg-card p-8">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

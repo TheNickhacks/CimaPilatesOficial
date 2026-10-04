@@ -677,6 +677,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 				"type": "Reserva",
 				"name": reservation.user.get_full_name() or reservation.user.email,
 				"email": reservation.user.email,
+				"telefono": getattr(reservation.user, "telefono", "") or "",
 				"note": reservation.nota or "",
 				"present": attendance_record.present if attendance_record is not None else False,
 			})
@@ -685,6 +686,7 @@ def _build_teacher_schedule_context(teacher, selected_session_id=None, selected_
 				"type": "Clase suelta",
 				"name": f"{booking.nombre or ''} {booking.apellido or ''}".strip() or booking.email,
 				"email": booking.email or "",
+				"telefono": getattr(booking, "telefono", "") or "",
 				"note": getattr(booking, "notas", None) or "",
 				"present": getattr(booking, "asistio", False),
 			})
@@ -940,13 +942,27 @@ def _plan_allows_booking(plan_request, class_session, now=None):
 	valid_until = _get_plan_valid_until(plan_request)
 	if valid_until <= now:
 		return False, "Tu plan ya no tiene vigencia activa."
-	if _get_session_local_datetime(class_session.starts_at) > valid_until:
+	session_local_dt = _get_session_local_datetime(class_session.starts_at)
+	if session_local_dt > valid_until:
 		return False, "La fecha de esta clase supera la vigencia de tu plan actual."
+
+	# Restricción exclusiva para Plan AM: Solo Lunes a Viernes entre 07:10 y 12:00 hrs
+	plan_slug = (getattr(plan_request.plan, "slug", "") or "").lower()
+	plan_nombre = (getattr(plan_request.plan, "nombre", "") or "").lower()
+	if plan_slug == "plan-am" or "plan am" in plan_nombre:
+		from datetime import time
+		if session_local_dt.weekday() >= 5:
+			return False, "El Plan AM permite reservar únicamente de lunes a viernes."
+		session_time = session_local_dt.time()
+		if session_time < time(7, 10) or session_time > time(12, 0):
+			return False, "El Plan AM permite reservar únicamente en el bloque AM (07:10 a 12:00 hrs)."
+
 	allowed_total = _get_plan_total_class_limit(plan_request) + _get_plan_bonus_class_count(plan_request.user, plan_request)
 	used_total = _get_plan_used_class_count(plan_request.user, plan_request, now=now)
 	if used_total >= allowed_total:
 		return False, "Ya alcanzaste el maximo total de clases disponibles para tu plan vigente."
 	return True, ""
+
 
 
 def _build_calendar_weeks(schedule_days):
@@ -2032,6 +2048,56 @@ def admin_dashboard(request):
 			messages.success(request, msg)
 			return redirect("core:admin_dashboard")
 
+		if action == "direct_activate_plan":
+			email = (request.POST.get("student_email") or "").strip().lower()
+			plan_id = request.POST.get("plan_id")
+			periodo = (request.POST.get("periodo") or "monthly").strip().lower()
+
+			if not email or not plan_id:
+				messages.error(request, "Por favor ingresa el correo de la alumna y selecciona un plan.")
+				return redirect("core:admin_dashboard")
+
+			if periodo not in {"monthly", "quarterly", "semester"}:
+				periodo = "monthly"
+
+			try:
+				plan = PlanCatalog.objects.get(pk=plan_id)
+			except PlanCatalog.DoesNotExist:
+				messages.error(request, "El plan seleccionado no existe.")
+				return redirect("core:admin_dashboard")
+
+			student = User.objects.filter(email__iexact=email).first()
+			if student is None:
+				first_name = email.split("@")[0].capitalize()
+				student = User.objects.create_user(
+					email=email,
+					nombre=first_name,
+					role=UserRole.STUDENT,
+				)
+
+			plan_request = PlanRequest.objects.create(
+				user=student,
+				plan=plan,
+				periodo=periodo,
+				metodo_pago=PaymentMethod.IN_STUDIO,
+				estado=PlanRequestStatus.CONFIRMED,
+				notas=f"Activación directa por Administración ({request.user.email})",
+			)
+
+			_log_admin_action(
+				request.user,
+				AdminActionType.PLAN_CONFIRMED,
+				target_user=student,
+				plan_request=plan_request,
+				details=f"Activación directa admin: {plan.nombre} ({plan_request.get_periodo_display()})",
+			)
+
+			messages.success(
+				request,
+				f"¡El plan '{plan.nombre}' ({plan_request.get_periodo_display()}) fue activado exitosamente para {student.get_full_name() or student.email}!"
+			)
+			return redirect("core:admin_dashboard")
+
 		if action in {"confirm_plan", "reject_plan"}:
 			try:
 				plan_request_id = int(request.POST.get("plan_request_id") or "")
@@ -2264,6 +2330,7 @@ def admin_dashboard(request):
 		"student_search_query": student_search_query,
 		"approved_students_search_results": approved_students_search_results,
 		"allow_pm_trial_classes": SystemSetting.get_setting("allow_pm_trial_classes", "false").lower() == "true",
+		"all_catalog_plans": list(PlanCatalog.objects.all().order_by("orden")),
 	}
 	context.update(_build_admin_overview_context(selected_month=selected_month))
 	return render(request, "core/dashboards/admin.html", context)
@@ -2642,6 +2709,7 @@ def admin_schedule_view(request):
 				"type": "regular",
 				"name": r.user.get_full_name() or r.user.email,
 				"email": r.user.email,
+				"telefono": getattr(r.user, "telefono", "") or "",
 			})
 		for b in single_bookings:
 			attendees.append({
@@ -2649,6 +2717,7 @@ def admin_schedule_view(request):
 				"type": "single",
 				"name": f"{b.nombre} {b.apellido or ''}".strip(),
 				"email": b.email,
+				"telefono": getattr(b, "telefono", "") or "",
 				"estado": b.estado,
 				"tipo_clase": getattr(b, "tipo_clase", "prueba"),
 				"tipo_label": "Clase de Prueba ($5.000)" if getattr(b, "tipo_clase", "prueba") == "prueba" else "Clase Suelta ($9.990)",
@@ -2772,6 +2841,7 @@ def admin_schedule_view(request):
 					"type": "Reserva",
 					"name": reservation.user.get_full_name() or reservation.user.email,
 					"email": reservation.user.email,
+					"telefono": getattr(reservation.user, "telefono", "") or "",
 					"note": reservation.nota or "",
 					"present": attendance_record.present if attendance_record is not None else False,
 				})
@@ -2780,6 +2850,7 @@ def admin_schedule_view(request):
 					"type": "Clase suelta",
 					"name": f"{booking.nombre or ''} {booking.apellido or ''}".strip() or booking.email,
 					"email": booking.email or "",
+					"telefono": getattr(booking, "telefono", "") or "",
 					"note": getattr(booking, "notas", None) or "",
 					"present": getattr(booking, "asistio", False),
 				})

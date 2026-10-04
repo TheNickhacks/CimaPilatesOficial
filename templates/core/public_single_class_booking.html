@@ -1,7 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}{{ class_title }} | Cima Pilates{% endblock %}
 {% block content %}
-<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+<section class="mx-auto max-w-7xl px-5 py-12 lg:px-8" x-data="{
+    activeWeek: {{ default_calendar_week_index|default:0 }},
+    openModal: {% if selected_single_class_session or single_class_booking_form.errors %}true{% else %}false{% endif %},
+    selectedSessionId: '{{ selected_single_class_session.id|default:'' }}',
+    modalDateLabel: '{{ selected_single_class_session_local_start|date:'l d \d\e F'|default:'' }}',
+    modalTimeLabel: '{{ selected_single_class_session_local_start|date:'H:i'|default:'' }} - {{ selected_single_class_session_local_end|date:'H:i'|default:'' }}'
+  }">
+  
   <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
     <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
       <div>
@@ -13,7 +20,7 @@
           </div>
         </div>
         <h1 class="mt-4 font-serif text-4xl font-light leading-tight">{{ class_title }}</h1>
-        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">{{ class_description }} Selecciona un bloque disponible, completa tus datos personales y adjunta tu comprobante de pago para agilizar la validación.</p>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-ivory/80">{{ class_description }} Selecciona un bloque disponible en la agenda para abrir el formulario y reservar tu lugar.</p>
       </div>
       <div class="rounded-[1.5rem] bg-ivory/10 px-6 py-5 text-right shrink-0">
         <p class="text-xs font-medium uppercase tracking-luxe text-butter">Valor {{ class_title }}</p>
@@ -25,195 +32,230 @@
   {% if single_class_success %}
     <div class="mt-6 rounded-[1.75rem] border border-olive/12 bg-gradient-to-br from-butter via-card to-ivory p-6 shadow-sm">
       <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud recibida</p>
-      <h2 class="mt-3 font-serif text-2xl text-charcoal">Ya registramos tu clase suelta</h2>
-      <p class="mt-3 text-sm leading-relaxed text-charcoal/75">Te enviaremos un correo confirmando la recepcion de tu solicitud y luego nuestro equipo revisara el pago para completar la validacion.</p>
+      <h2 class="mt-3 font-serif text-2xl text-charcoal">¡Ya registramos tu clase!</h2>
+      <p class="mt-3 text-sm leading-relaxed text-charcoal/75">Te enviaremos un correo confirmando la recepción de tu solicitud. Nuestro equipo revisará el comprobante de pago para completar la validación.</p>
     </div>
   {% endif %}
 
-  <div class="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]" x-data="{ activeWeek: {{ default_calendar_week_index|default:0 }} }">
-    <div>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vista calendario</p>
-          <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Agenda de clase suelta</h2>
-          <p class="mt-2 text-sm text-charcoal/65">Selecciona un bloque disponible para habilitar el formulario de inscripción.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          {% for week in calendar_weeks %}
-            <button
-              type="button"
-              @click="activeWeek = {{ forloop.counter0 }}"
-              :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-card text-charcoal border-olive/15 hover:bg-olive/5'"
-              class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
-            >
-              Semana {{ forloop.counter }} · {{ week.label }}
-            </button>
-          {% endfor %}
-        </div>
+  <!-- Vista Calendario Full Width -->
+  <div class="mt-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Vista calendario</p>
+        <h2 class="mt-2 font-serif text-3xl font-light text-charcoal">Agenda de {{ class_title }}</h2>
+        <p class="mt-2 text-sm text-charcoal/65">Haz clic sobre cualquier bloque disponible para abrir el formulario emergente y agendar.</p>
       </div>
+      <div class="flex flex-wrap gap-2">
+        {% for week in calendar_weeks %}
+          <button
+            type="button"
+            @click="activeWeek = {{ forloop.counter0 }}"
+            :class="activeWeek === {{ forloop.counter0 }} ? 'bg-olive text-ivory border-olive' : 'bg-card text-charcoal border-olive/15 hover:bg-olive/5'"
+            class="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+          >
+            Semana {{ forloop.counter }} · {{ week.label }}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
 
-      {% for week in calendar_weeks %}
-        <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak class="mt-6">
-          <div class="overflow-x-auto rounded-[2rem] border border-olive/12 bg-card shadow-sm">
-            <div class="min-w-[1120px]">
-              <div class="grid grid-cols-[92px_repeat(7,minmax(150px,1fr))]">
-                <div class="border-b border-r border-olive/10 bg-olive px-4 py-5 text-xs font-medium uppercase tracking-luxe text-butter">Hora</div>
-                {% for day in week.days %}
-                  <div class="border-b border-olive/10 bg-olive px-4 py-5 text-ivory {% if not forloop.last %}border-r{% endif %}">
-                    <p class="text-xs font-medium uppercase tracking-luxe text-butter">{{ day.date|date:"D" }}</p>
-                    <p class="mt-2 font-serif text-2xl">{{ day.date|date:"d" }}</p>
-                    <p class="mt-1 text-sm text-ivory/75">{{ day.date|date:"d/m" }}</p>
-                    {% if day.is_holiday %}
-                      <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Feriado</p>
-                      <p class="mt-1 text-[11px] text-ivory/65">{{ day.holiday_name }}</p>
-                    {% elif day.is_closed %}
-                      <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Sin clases</p>
+    {% for week in calendar_weeks %}
+      <div x-show="activeWeek === {{ forloop.counter0 }}" x-cloak class="mt-6">
+        <div class="overflow-x-auto rounded-[2rem] border border-olive/12 bg-card shadow-sm">
+          <div class="min-w-[1120px]">
+            <div class="grid grid-cols-[92px_repeat(7,minmax(150px,1fr))]">
+              <div class="border-b border-r border-olive/10 bg-olive px-4 py-5 text-xs font-medium uppercase tracking-luxe text-butter">Hora</div>
+              {% for day in week.days %}
+                <div class="border-b border-olive/10 bg-olive px-4 py-5 text-ivory {% if not forloop.last %}border-r{% endif %}">
+                  <p class="text-xs font-medium uppercase tracking-luxe text-butter">{{ day.date|date:"D" }}</p>
+                  <p class="mt-2 font-serif text-2xl">{{ day.date|date:"d" }}</p>
+                  <p class="mt-1 text-sm text-ivory/75">{{ day.date|date:"d/m" }}</p>
+                  {% if day.is_holiday %}
+                    <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Feriado</p>
+                    <p class="mt-1 text-[11px] text-ivory/65">{{ day.holiday_name }}</p>
+                  {% elif day.is_closed %}
+                    <p class="mt-2 text-xs uppercase tracking-luxe text-ivory/60">Sin clases</p>
+                  {% endif %}
+                </div>
+              {% endfor %}
+
+              {% for row in week.time_rows %}
+                <div class="border-r border-b border-olive/10 bg-ivory/60 px-3 py-4 text-sm font-medium text-charcoal">
+                  {{ row.time_key }}
+                </div>
+                {% for slot in row.cells %}
+                  <div class="border-b border-olive/10 p-2 {% if not forloop.last %}border-r{% endif %}">
+                    {% if slot %}
+                      {% if slot.can_book %}
+                        <button
+                          type="button"
+                          @click="openModal = true; selectedSessionId = '{{ slot.session.id }}'; modalDateLabel = '{{ slot.starts_at_local|date:'l d \d\e F' }}'; modalTimeLabel = '{{ slot.starts_at_local|date:'H:i' }} - {{ slot.ends_at_local|date:'H:i' }}'; $nextTick(() => { const el = document.getElementById('id_session_id_hidden'); if (el) el.value = '{{ slot.session.id }}'; })"
+                          class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md border-olive/20 bg-butter/55 text-charcoal hover:border-olive hover:bg-butter/80"
+                        >
+                          <div class="flex items-start justify-between gap-2">
+                            <div>
+                              <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                              <p class="mt-1 text-xs text-charcoal/60">{{ slot.ends_at_local|date:"H:i" }}</p>
+                            </div>
+                            <span class="shrink-0 self-start rounded-full bg-olive px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none text-ivory shadow-sm">
+                              Agendar
+                            </span>
+                          </div>
+                          <div class="mt-3 flex items-center justify-between">
+                            <p class="text-xs text-charcoal/70 font-medium">{{ slot.capacity_left }} cupos libres</p>
+                            <span class="text-xs font-bold text-olive group-hover:underline">Elegir →</span>
+                          </div>
+                        </button>
+                      {% else %}
+                        <div class="flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border border-olive/10 bg-ivory/55 p-3 text-left text-charcoal/75">
+                          <div class="flex items-start justify-between gap-2">
+                            <div>
+                              <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
+                              <p class="mt-1 text-xs text-charcoal/60">{{ slot.ends_at_local|date:"H:i" }}</p>
+                            </div>
+                            <span class="shrink-0 self-start rounded-full bg-cloud/70 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none text-charcoal/70">
+                              Bloqueada
+                            </span>
+                          </div>
+                          <div class="mt-3">
+                            <p class="text-xs text-charcoal/60">{{ slot.blocked_reason }}</p>
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% else %}
+                      <div class="h-full min-h-[92px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
                     {% endif %}
                   </div>
                 {% endfor %}
-
-                {% for row in week.time_rows %}
-                  <div class="border-r border-b border-olive/10 bg-ivory/60 px-3 py-4 text-sm font-medium text-charcoal">
-                    {{ row.time_key }}
-                  </div>
-                  {% for slot in row.cells %}
-                    <div class="border-b border-olive/10 p-2 {% if not forloop.last %}border-r{% endif %}">
-                      {% if slot %}
-                        {% if slot.can_book %}
-                          <a
-                            href="{% url 'core:public_single_class_booking' %}?session={{ slot.session.id }}&tipo={{ tipo_clase }}#reserva-clase-suelta"
-                            class="group flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm {% if slot.is_selected %}border-olive bg-olive text-ivory ring-2 ring-olive/20{% else %}border-olive/20 bg-butter/55 text-charcoal hover:border-olive/35{% endif %}"
-                          >
-                            <div class="flex items-start justify-between gap-2">
-                              <div>
-                                <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
-                                <p class="mt-1 text-xs {% if slot.is_selected %}text-ivory/80{% else %}text-charcoal/60{% endif %}">{{ slot.ends_at_local|date:"H:i" }}</p>
-                              </div>
-                              <span class="shrink-0 self-start rounded-full bg-olive px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none {% if slot.is_selected %}bg-ivory/15 text-ivory{% else %}text-ivory{% endif %}">
-                                Disponible
-                              </span>
-                            </div>
-                            <div class="mt-3">
-                              <p class="text-xs {% if slot.is_selected %}text-ivory/85{% else %}text-charcoal/65{% endif %}">{{ slot.capacity_left }} cupos disponibles</p>
-                            </div>
-                          </a>
-                        {% else %}
-                          <div class="flex h-full min-h-[92px] w-full flex-col justify-between rounded-[1.1rem] border border-olive/10 bg-ivory/55 p-3 text-left text-charcoal/75">
-                            <div class="flex items-start justify-between gap-2">
-                              <div>
-                                <p class="font-serif text-lg leading-none">{{ slot.starts_at_local|date:"H:i" }}</p>
-                                <p class="mt-1 text-xs text-charcoal/60">{{ slot.ends_at_local|date:"H:i" }}</p>
-                              </div>
-                              <span class="shrink-0 self-start rounded-full bg-cloud/70 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider leading-none text-charcoal/70">
-                                Bloqueada
-                              </span>
-                            </div>
-                            <div class="mt-3">
-                              <p class="text-xs text-charcoal/60">{{ slot.blocked_reason }}</p>
-                            </div>
-                          </div>
-                        {% endif %}
-                      {% else %}
-                        <div class="h-full min-h-[92px] rounded-[1.1rem] border border-dashed border-olive/10 bg-ivory/35"></div>
-                      {% endif %}
-                    </div>
-                  {% endfor %}
-                {% endfor %}
-              </div>
+              {% endfor %}
             </div>
           </div>
         </div>
-      {% endfor %}
-    </div>
+      </div>
+    {% endfor %}
+  </div>
 
-    <div id="reserva-clase-suelta" class="rounded-[2rem] border border-olive/12 bg-card p-8" x-data="{ metodo: 'transferencia' }">
-      <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Solicitud de {{ class_title }}</p>
-      <h2 class="mt-3 font-serif text-3xl font-light text-charcoal">Completa tus datos</h2>
+  <!-- Modal Pop-up para la Solicitud de Clase -->
+  <div x-show="openModal" x-cloak
+       class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95">
 
-      {% if selected_single_class_session %}
-        <div class="mt-5 rounded-[1.5rem] border border-olive/10 bg-ivory/70 p-5">
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Bloque seleccionado</p>
-          <p class="mt-3 font-serif text-2xl text-charcoal">{{ selected_single_class_session_local_start|date:"d/m/Y" }}</p>
-          <p class="mt-1 text-sm text-charcoal/70">{{ selected_single_class_session_local_start|date:"H:i" }} - {{ selected_single_class_session_local_end|date:"H:i" }}</p>
+    <!-- Overlay backdrop -->
+    <div class="fixed inset-0 bg-charcoal/80 backdrop-blur-md" @click="openModal = false"></div>
+
+    <!-- Modal Dialog -->
+    <div class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border border-olive/20 bg-card p-6 sm:p-9 shadow-2xl z-10 text-charcoal my-auto">
+      
+      <!-- Botón Cerrar X -->
+      <button @click="openModal = false" type="button"
+              class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full border border-olive/20 bg-ivory text-charcoal transition-colors hover:bg-forest hover:text-white">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Encabezado del Pop-up -->
+      <div class="text-left">
+        <span class="inline-flex items-center gap-2 rounded-full border border-olive/20 bg-olive/15 px-4 py-1 text-xs font-extrabold uppercase tracking-widest text-olive shadow-sm">
+          🎟️ SOLICITUD DE {{ class_title|upper }}
+        </span>
+        <h3 class="mt-3 font-serif text-3xl font-light text-charcoal sm:text-4xl">
+          Completa tus datos personales
+        </h3>
+        
+        <!-- Tarjeta del Bloque Seleccionado -->
+        <div class="mt-4 rounded-2xl border border-olive/20 bg-butter/40 p-4">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-olive-gold">Bloque de clase seleccionado:</p>
+          <p class="font-serif text-xl font-bold text-charcoal mt-0.5" x-text="modalDateLabel || '{{ selected_single_class_session_local_start|date:'l d \d\e F' }}'"></p>
+          <p class="text-xs text-charcoal/80 font-semibold" x-text="modalTimeLabel || '{{ selected_single_class_session_local_start|date:'H:i' }} - {{ selected_single_class_session_local_end|date:'H:i' }}'"></p>
         </div>
-      {% else %}
-        <div class="mt-5 rounded-[1.5rem] border border-dashed border-olive/20 bg-ivory/50 p-5">
-          <p class="text-sm text-charcoal/70">Primero selecciona un horario disponible desde la agenda para habilitar este formulario.</p>
-        </div>
-      {% endif %}
+      </div>
 
       {% if single_class_booking_form.non_field_errors %}
-        <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {% for error in single_class_booking_form.non_field_errors %}
             <p>{{ error }}</p>
           {% endfor %}
         </div>
       {% endif %}
 
-      <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
+      <!-- Formulario de Reserva -->
+      <form method="post" enctype="multipart/form-data" class="mt-6 space-y-4" x-data="{ metodo: 'transferencia' }">
         {% csrf_token %}
-        {{ single_class_booking_form.session_id }}
+        <input type="hidden" name="session_id" id="id_session_id_hidden" :value="selectedSessionId || '{{ selected_single_class_session.id|default:'' }}'" />
         {{ single_class_booking_form.tipo_clase }}
+
         <div class="grid gap-4 md:grid-cols-2">
           <div>
-            <label for="{{ single_class_booking_form.nombre.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.nombre.label }}</label>
+            <label for="{{ single_class_booking_form.nombre.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.nombre.label }} *</label>
             {{ single_class_booking_form.nombre }}
             {% for error in single_class_booking_form.nombre.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
           <div>
-            <label for="{{ single_class_booking_form.apellido.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.apellido.label }}</label>
+            <label for="{{ single_class_booking_form.apellido.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.apellido.label }}</label>
             {{ single_class_booking_form.apellido }}
             {% for error in single_class_booking_form.apellido.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
         </div>
+
         <div class="grid gap-4 md:grid-cols-2">
           <div>
-            <label for="{{ single_class_booking_form.rut.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.rut.label }}</label>
+            <label for="{{ single_class_booking_form.rut.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.rut.label }} *</label>
             {{ single_class_booking_form.rut }}
             {% for error in single_class_booking_form.rut.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
           <div>
-            <label for="{{ single_class_booking_form.telefono.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.telefono.label }}</label>
+            <label for="{{ single_class_booking_form.telefono.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.telefono.label }} *</label>
             {{ single_class_booking_form.telefono }}
             {% for error in single_class_booking_form.telefono.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
         </div>
+
         <div class="grid gap-4 md:grid-cols-2">
           <div>
-            <label for="{{ single_class_booking_form.email.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.email.label }}</label>
+            <label for="{{ single_class_booking_form.email.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.email.label }} *</label>
             {{ single_class_booking_form.email }}
             {% for error in single_class_booking_form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
           <div>
-            <label for="{{ single_class_booking_form.edad.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.edad.label }}</label>
+            <label for="{{ single_class_booking_form.edad.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.edad.label }} *</label>
             {{ single_class_booking_form.edad }}
             {% for error in single_class_booking_form.edad.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
         </div>
+
         <div>
-          <label for="{{ single_class_booking_form.operaciones_lesiones.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.operaciones_lesiones.label }}</label>
+          <label for="{{ single_class_booking_form.operaciones_lesiones.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.operaciones_lesiones.label }}</label>
           {{ single_class_booking_form.operaciones_lesiones }}
           {% for error in single_class_booking_form.operaciones_lesiones.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
+
         <div>
-          <label for="{{ single_class_booking_form.condiciones_medicas.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.condiciones_medicas.label }}</label>
+          <label for="{{ single_class_booking_form.condiciones_medicas.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.condiciones_medicas.label }}</label>
           {{ single_class_booking_form.condiciones_medicas }}
           {% for error in single_class_booking_form.condiciones_medicas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
+
         <div>
-          <label for="{{ single_class_booking_form.metodo_pago.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.metodo_pago.label }}</label>
+          <label for="{{ single_class_booking_form.metodo_pago.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.metodo_pago.label }}</label>
           {{ single_class_booking_form.metodo_pago }}
           {% for error in single_class_booking_form.metodo_pago.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
         
         <div>
-          <label for="{{ single_class_booking_form.notas.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.notas.label }}</label>
+          <label for="{{ single_class_booking_form.notas.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">{{ single_class_booking_form.notas.label }}</label>
           {{ single_class_booking_form.notas }}
           {% for error in single_class_booking_form.notas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
         </div>
         
-        <div x-show="metodo === 'transferencia'" class="space-y-4 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Datos de transferencia</p>
+        <!-- Datos de Transferencia y Carga Obligatoria de Comprobante -->
+        <div x-show="metodo === 'transferencia'" class="space-y-4 rounded-[1.5rem] border border-olive/15 bg-ivory/80 p-5">
+          <p class="text-xs font-bold uppercase tracking-wider text-olive-gold">Datos de Transferencia Bancaria</p>
           {% if transfer_notice %}
             <div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900 flex items-center gap-2">
               <svg class="h-4 w-4 shrink-0 fill-amber-600" viewBox="0 0 20 20">
@@ -222,34 +264,33 @@
               <span>* {{ transfer_notice }}</span>
             </div>
           {% endif %}
-          <div class="space-y-2 text-sm text-charcoal/75">
+          <div class="space-y-1.5 text-xs text-charcoal/80 bg-white/70 p-3.5 rounded-xl border border-olive/10">
             {% for label, value in transfer_details %}
-              <p><span class="font-medium text-charcoal">{{ label }}:</span> {{ value }}</p>
+              <p><span class="font-bold text-charcoal">{{ label }}:</span> {{ value }}</p>
             {% endfor %}
           </div>
           <div>
-            <label for="{{ single_class_booking_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ single_class_booking_form.comprobante.label }}</label>
+            <label for="{{ single_class_booking_form.comprobante.id_for_label }}" class="text-xs font-bold uppercase tracking-wider text-charcoal/80">
+              Adjuntar Comprobante de Pago <span class="text-red-600">* (Obligatorio)</span>
+            </label>
             {{ single_class_booking_form.comprobante }}
             {% for error in single_class_booking_form.comprobante.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
           </div>
-          <button type="submit" class="btn-booking-primary w-full" {% if not selected_single_class_session %}disabled{% endif %}>
-            Subir Comprobante y Enviar Solicitud
+          <button type="submit" class="btn-booking-primary w-full text-xs font-extrabold uppercase py-3.5">
+            ✓ Subir Comprobante y Enviar Solicitud
           </button>
         </div>
 
-        <div x-show="metodo === 'link_pago'" x-cloak class="space-y-4 rounded-[1.5rem] border border-olive/12 bg-ivory/70 p-5">
-          <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Link de Pago (SumUp)</p>
-          <p class="text-sm text-charcoal/75">Al presionar el botón a continuación, serás redirigida a SumUp para realizar el pago y al mismo tiempo registramos tu solicitud:</p>
+        <div x-show="metodo === 'link_pago'" x-cloak class="space-y-4 rounded-[1.5rem] border border-olive/15 bg-ivory/80 p-5">
+          <p class="text-xs font-bold uppercase tracking-wider text-olive-gold">Link de Pago Online (SumUp)</p>
+          <p class="text-xs text-charcoal/80">Al presionar el botón serás redirigida a SumUp para realizar el pago y registrar tu reserva:</p>
           <button type="submit"
                   data-url="{% if is_trial or tipo_clase == 'prueba' %}{{ single_class_plan.link_pago_prueba|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% else %}{{ single_class_plan.link_pago_suelta|default:single_class_plan.link_pago|default:'https://pay.sumup.com/b2c/Q4LDGO86' }}{% endif %}"
                   @click="if ($el.dataset.url) { window.open($el.dataset.url, '_blank'); }"
-                  class="btn-booking-primary w-full"
-                  {% if not selected_single_class_session %}disabled{% endif %}>
+                  class="btn-booking-primary w-full text-xs font-extrabold uppercase py-3.5">
             Pagar en SumUp y Enviar Solicitud
           </button>
         </div>
-
-        <p class="text-xs leading-relaxed text-charcoal/55">Al enviar esta solicitud registramos tus datos para identificarte, revisar el pago y coordinar tu asistencia al estudio.</p>
       </form>
     </div>
   </div>

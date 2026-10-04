@@ -52,6 +52,12 @@ class LandingLeadForm(forms.Form):
 		)
 
 
+ONLINE_PAYMENT_METHOD_CHOICES = [
+	(PaymentMethod.TRANSFER, "Transferencia bancaria"),
+	(PaymentMethod.LINK, "Link de pago (SumUp / Tarjetas)"),
+]
+
+
 class PlanRequestForm(forms.Form):
 	plan_slug = forms.CharField(widget=forms.HiddenInput())
 	periodo = forms.ChoiceField(
@@ -61,15 +67,21 @@ class PlanRequestForm(forms.Form):
 	)
 	metodo_pago = forms.ChoiceField(
 		label="Forma de pago",
-		choices=PaymentMethod.choices,
-		initial=PaymentMethod.IN_STUDIO,
+		choices=ONLINE_PAYMENT_METHOD_CHOICES,
+		initial=PaymentMethod.TRANSFER,
 	)
 	notas = forms.CharField(
 		label="Notas adicionales",
 		required=False,
 		widget=forms.Textarea(attrs={"rows": 3}),
 	)
-	comprobante = forms.FileField(label="Subir comprobante", required=False)
+	comprobante = forms.FileField(
+		label="Subir comprobante de pago *",
+		required=True,
+		error_messages={
+			"required": "Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan."
+		},
+	)
 
 	def __init__(self, *args, user=None, **kwargs):
 		self.user = user
@@ -79,12 +91,14 @@ class PlanRequestForm(forms.Form):
 			"text-sm text-charcoal outline-none transition focus:border-olive focus:ring-2 focus:ring-olive/10"
 		)
 		self.fields["periodo"].widget.attrs.update({"class": field_classes})
+		self.fields["metodo_pago"].choices = ONLINE_PAYMENT_METHOD_CHOICES
 		self.fields["metodo_pago"].widget.attrs.update({"class": field_classes})
 		self.fields["notas"].widget.attrs.update({"class": field_classes})
 		self.fields["comprobante"].widget.attrs.update(
 			{
 				"class": "mt-2 block w-full rounded-2xl border border-dashed border-olive/20 bg-ivory px-4 py-3 text-sm text-charcoal",
 				"accept": ".pdf,.png,.jpg,.jpeg,.webp",
+				"required": "required",
 			}
 		)
 		self.plan = None
@@ -97,8 +111,16 @@ class PlanRequestForm(forms.Form):
 		self.plan = plan
 		return slug
 
+	def clean_comprobante(self):
+		comprobante = self.cleaned_data.get("comprobante")
+		if not comprobante:
+			raise forms.ValidationError("Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan.")
+		return comprobante
+
 	def clean(self):
 		cleaned_data = super().clean()
+		if not self.files.get("comprobante") and not cleaned_data.get("comprobante"):
+			self.add_error("comprobante", "Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan.")
 		if self.user:
 			from django.utils import timezone
 			from datetime import timedelta
@@ -195,7 +217,7 @@ class SingleClassPublicBookingForm(forms.Form):
 		required=False,
 		widget=forms.Textarea(attrs={"rows": 3}),
 	)
-	comprobante = forms.FileField(label="Subir comprobante", required=False)
+	comprobante = forms.FileField(label="Subir comprobante de pago", required=True)
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -210,6 +232,7 @@ class SingleClassPublicBookingForm(forms.Form):
 			{
 				"class": "mt-2 block w-full rounded-2xl border border-dashed border-olive/20 bg-ivory px-4 py-3 text-sm text-charcoal",
 				"accept": ".pdf,.png,.jpg,.jpeg,.webp",
+				"required": "required",
 			}
 		)
 		self.session = None

@@ -297,39 +297,70 @@
             {% endif %}
 
             {% if selected_teacher_session_single_bookings %}
-              <div class="mt-6 border-t border-olive/10 pt-6">
-                <p class="text-xs font-medium uppercase tracking-luxe text-olive-gold">Clases sueltas agendadas</p>
-                <div class="mt-4 space-y-4">
+              <div class="mt-8 border-t-2 border-dashed border-olive/15 pt-6">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-terracota/15 px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest text-terracota shadow-sm">
+                      🎟️ Clases Sueltas y de Prueba
+                    </span>
+                    <h4 class="mt-2 font-serif text-2xl font-bold text-charcoal">Pasar Lista de Clases Sueltas / Prueba</h4>
+                    <p class="mt-1 text-xs text-charcoal/70">Marca la casilla de cada alumna que haya asistido a la clase.</p>
+                  </div>
+                  <button type="submit" class="btn-primary shrink-0 text-xs py-2.5 px-5">
+                    ✓ Guardar Asistencia
+                  </button>
+                </div>
+
+                <div class="mt-5 space-y-4">
                   {% for booking in selected_teacher_session_single_bookings %}
-                    <label class="block rounded-[1.6rem] border border-olive/12 bg-ivory/70 p-5 cursor-pointer">
+                    <label class="block rounded-[1.6rem] border-2 border-terracota/20 bg-ivory/80 p-5 cursor-pointer transition-all hover:border-terracota/40 hover:shadow-md">
                       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div class="flex items-start gap-4 w-full">
-                          <input type="checkbox" name="present_single_booking_ids" value="{{ booking.id }}" {% if booking.asistio %}checked{% endif %} class="mt-1 h-5 w-5 rounded border-olive/30 text-olive focus:ring-olive/20 shrink-0" />
+                          <input type="checkbox" name="present_single_booking_ids" value="{{ booking.id }}" {% if booking.asistio %}checked{% endif %} class="mt-1 h-6 w-6 rounded border-terracota/40 text-terracota focus:ring-terracota/30 shrink-0" />
                           <div class="w-full">
-                            <div class="flex items-center gap-2">
-                              <span class="inline-block rounded-full bg-olive/10 px-2.5 py-0.5 text-[10px] font-semibold text-olive uppercase tracking-wider">{{ booking.get_tipo_clase_display }}</span>
-                              <p class="text-base font-medium text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
+                            <div class="flex flex-wrap items-center gap-2">
+                              {% if booking.tipo_clase == 'prueba' %}
+                                <span class="rounded-full bg-terracota px-3 py-0.5 text-[10px] font-extrabold text-white uppercase tracking-wider shadow-sm">☀️ Clase Prueba $5.000</span>
+                              {% else %}
+                                <span class="rounded-full bg-olive px-3 py-0.5 text-[10px] font-extrabold text-white uppercase tracking-wider shadow-sm">🎟️ Clase Suelta $9.990</span>
+                              {% endif %}
+                              <p class="text-lg font-bold text-charcoal">{{ booking.nombre }} {{ booking.apellido|default:"" }}</p>
+                              {% if booking.asistio %}
+                                <span class="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 border border-emerald-300">✓ Presente</span>
+                              {% endif %}
                             </div>
-                            <p class="mt-1 text-sm text-charcoal/70">{{ booking.email }}{% if booking.telefono %} · {{ booking.telefono }}{% endif %}</p>
                             
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs bg-ivory/40 p-3.5 rounded-xl border border-olive/5">
-                              <div><strong class="text-olive">RUT:</strong> {{ booking.rut }}</div>
-                              <div><strong class="text-olive">Edad:</strong> {{ booking.edad|default:"No especificada" }}</div>
-                              <div><strong class="text-olive">Forma de Pago:</strong> {{ booking.get_metodo_pago_display }}</div>
+                            <p class="mt-1.5 text-xs text-charcoal/80">
+                              {{ booking.email }}
+                              {% if booking.telefono %}
+                                · <a href="https://wa.me/{{ booking.telefono|cut:' '|cut:'+'|cut:'-' }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-bold text-emerald-700 hover:underline" @click.stop title="Contactar por WhatsApp">
+                                    💬 {{ booking.telefono }}
+                                  </a>
+                              {% endif %}
+                            </p>
+                            
+                            <div class="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 text-xs bg-white/70 p-3.5 rounded-xl border border-olive/10">
+                              <div><strong class="text-charcoal">RUT:</strong> {{ booking.rut }}</div>
+                              <div><strong class="text-charcoal">Edad:</strong> {{ booking.edad|default:"No especificada" }}</div>
+                              <div><strong class="text-charcoal">Método Pago:</strong> {{ booking.get_metodo_pago_display }}</div>
                             </div>
                             
                             <div class="mt-3 space-y-2 text-xs">
-                              <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
-                                <strong class="text-olive block mb-1">🏥 Operaciones / Lesiones:</strong> 
-                                {{ booking.operaciones_lesiones|default:"Ninguna declarada" }}
-                              </p>
-                              <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
-                                <strong class="text-olive block mb-1">❤️ Condiciones de Salud:</strong> 
-                                {{ booking.condiciones_medicas|default:"Ninguna declarada" }}
-                              </p>
+                              {% if booking.operaciones_lesiones %}
+                                <p class="bg-amber-50/80 p-3 rounded-xl border border-amber-200/60 text-amber-900">
+                                  <strong class="block mb-0.5 text-amber-950 font-bold">🏥 Operaciones / Lesiones:</strong> 
+                                  {{ booking.operaciones_lesiones }}
+                                </p>
+                              {% endif %}
+                              {% if booking.condiciones_medicas %}
+                                <p class="bg-rose-50/80 p-3 rounded-xl border border-rose-200/60 text-rose-900">
+                                  <strong class="block mb-0.5 text-rose-950 font-bold">❤️ Condiciones de Salud:</strong> 
+                                  {{ booking.condiciones_medicas }}
+                                </p>
+                              {% endif %}
                               {% if booking.notas %}
-                                <p class="bg-ivory/40 p-3 rounded-xl border border-olive/5">
-                                  <strong class="text-olive block mb-1">📝 Notas adicionales:</strong> 
+                                <p class="bg-white/60 p-3 rounded-xl border border-olive/10 text-charcoal/80">
+                                  <strong class="text-olive block mb-0.5 font-bold">📝 Notas del Registro:</strong> 
                                   {{ booking.notas }}
                                 </p>
                               {% endif %}

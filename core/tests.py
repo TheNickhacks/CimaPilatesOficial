@@ -69,6 +69,9 @@ class SingleClassFlowTests(TestCase):
             capacidad_maxima=8,
         )
 
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        dummy_file = SimpleUploadedFile("comprobante.png", b"file_content", content_type="image/png")
+
         # Book a suelta class for session2 (should succeed even if Maria already had a trial class)
         form_data = {
             "session_id": session2.id,
@@ -80,7 +83,11 @@ class SingleClassFlowTests(TestCase):
             "edad": 30,
             "metodo_pago": "transferencia",
         }
-        form = SingleClassPublicBookingForm(data=form_data)
+        form_no_file = SingleClassPublicBookingForm(data=form_data)
+        self.assertFalse(form_no_file.is_valid())
+        self.assertIn("comprobante", form_no_file.errors)
+
+        form = SingleClassPublicBookingForm(data=form_data, files={"comprobante": dummy_file})
         self.assertTrue(form.is_valid(), form.errors)
         booking = form.save()
         self.assertEqual(booking.tipo_clase, "suelta")
@@ -217,19 +224,27 @@ class PlanRenewalFlowTests(TestCase):
         from core.forms import PlanRequestForm
         from django.urls import reverse
 
-        # First request succeeds
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        dummy_file1 = SimpleUploadedFile("comprobante1.pdf", b"file content", content_type="application/pdf")
+        dummy_file2 = SimpleUploadedFile("comprobante2.pdf", b"file content", content_type="application/pdf")
+
         form_data = {
             "plan_slug": self.plan.slug,
             "periodo": "monthly",
-            "metodo_pago": "presencial",
-            "notas": "Primera solicitud",
+            "metodo_pago": "transferencia",
         }
-        form1 = PlanRequestForm(data=form_data, user=self.student)
+        # Request without comprobante fails
+        form_no_file = PlanRequestForm(data=form_data, user=self.student)
+        self.assertFalse(form_no_file.is_valid())
+        self.assertIn("comprobante", form_no_file.errors)
+
+        # First request with comprobante succeeds
+        form1 = PlanRequestForm(data=form_data, files={"comprobante": dummy_file1}, user=self.student)
         self.assertTrue(form1.is_valid(), form1.errors)
         form1.save()
 
-        # Second request within 5 minutes should fail validation gracefully without 500 error
-        form2 = PlanRequestForm(data=form_data, user=self.student)
+        # Second request within 5 minutes should fail validation gracefully
+        form2 = PlanRequestForm(data=form_data, files={"comprobante": dummy_file2}, user=self.student)
         self.assertFalse(form2.is_valid())
         self.assertIn("Ya has enviado una solicitud de plan recientemente", str(form2.errors))
 
@@ -268,10 +283,11 @@ class PlanRenewalFlowTests(TestCase):
         )
 
         # 1. Student creates a reservation before plan approval
-        ClassReservation.objects.create(
+        past_res = ClassReservation.objects.create(
             class_session=session1,
             user=self.student,
         )
+        ClassReservation.objects.filter(pk=past_res.pk).update(created_at=now - timedelta(hours=1))
 
         # 2. Plan is created and confirmed now
         plan_req = PlanRequest.objects.create(
@@ -344,6 +360,128 @@ class PlanRenewalFlowTests(TestCase):
         )
         self.assertContains(res_student, "Se utiliza esta cuenta debido a problemas en la cuenta principal de la empresa.")
         self.assertContains(res_student, "Banco Estado")
+
+
+class PlanAMRestrictionTests(TestCase):
+    def setUp(self):
+        from accounts.models import UserRole
+        from core.models import PlanCatalog, PlanRequest, PlanRequestStatus, PlanBillingPeriod, PaymentMethod
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        import zoneinfo
+
+        self.student = User.objects.create_user(
+            email="am_student@example.com",
+            password="Password123!",
+            nombre="Camila",
+            apellido="AM",
+            role=UserRole.STUDENT,
+        )
+        self.plan_am = PlanCatalog.objects.filter(slug="plan-am").first()
+        if not self.plan_am:
+            self.plan_am = PlanCatalog.objects.create(
+                slug="plan-am",
+                nombre="Plan AM (Exclusivo AM)",
+                icono="☀️",
+                clases_por_mes=4,
+                frecuencia="4 clases/mes",
+                precio_mensual=28000,
+                precio_trimestral=75000,
+                precio_semestral=140000,
+                activo=True,
+                orden=1,
+            )
+        self.plan_request = PlanRequest.objects.create(
+            user=self.student,
+            plan=self.plan_am,
+            periodo=PlanBillingPeriod.MONTHLY,
+            metodo_pago=PaymentMethod.TRANSFER,
+            estado=PlanRequestStatus.CONFIRMED,
+        )
+
+    def test_plan_am_allows_morning_weekdays_and_blocks_saturday_or_pm(self):
+        from core.models import ClassSession
+        from core.views import _plan_allows_booking
+        from django.utils import timezone
+        import zoneinfo
+        from datetime import datetime
+
+        tz = zoneinfo.ZoneInfo("America/Santiago")
+
+        # Next Monday at 08:10 AM
+        monday_8am = datetime(2026, 10, 5, 8, 10, tzinfo=tz) # 2026-10-05 is Monday
+        monday_session = ClassSession.objects.create(
+            starts_at=monday_8am,
+            ends_at=monday_8am + timedelta(minutes=50),
+        )
+        can_book_mon, msg_mon = _plan_allows_booking(self.plan_request, monday_session, now=monday_8am - timedelta(days=1))
+        self.assertTrue(can_book_mon, msg_mon)
+
+        # Next Monday at 18:10 PM (Evening)
+        monday_18pm = datetime(2026, 10, 5, 18, 10, tzinfo=tz)
+        pm_session = ClassSession.objects.create(
+            starts_at=monday_18pm,
+            ends_at=monday_18pm + timedelta(minutes=50),
+        )
+        can_book_pm, msg_pm = _plan_allows_booking(self.plan_request, pm_session, now=monday_8am - timedelta(days=1))
+        self.assertFalse(can_book_pm)
+        self.assertIn("bloque AM", msg_pm)
+
+        # Saturday at 09:10 AM
+        saturday_9am = datetime(2026, 10, 10, 9, 10, tzinfo=tz) # 2026-10-10 is Saturday
+        saturday_session = ClassSession.objects.create(
+            starts_at=saturday_9am,
+            ends_at=saturday_9am + timedelta(minutes=50),
+        )
+        can_book_sat, msg_sat = _plan_allows_booking(self.plan_request, saturday_session, now=monday_8am - timedelta(days=1))
+        self.assertFalse(can_book_sat)
+        self.assertIn("lunes a viernes", msg_sat)
+
+
+class AdminDirectPlanActivationTests(TestCase):
+    def setUp(self):
+        from accounts.models import UserRole
+        self.admin = User.objects.create_user(
+            email="admin@cimapilates.cl",
+            password="Password123!",
+            nombre="Admin",
+            role=UserRole.ADMIN,
+        )
+        self.plan, _ = PlanCatalog.objects.get_or_create(
+            slug="plan-12",
+            defaults={
+                "nombre": "Plan 12 Clases",
+                "clases_por_mes": 12,
+                "frecuencia": "3 veces/semana",
+                "precio_mensual": 79990,
+                "precio_trimestral": 215990,
+                "precio_semestral": 399990,
+                "activo": True,
+                "orden": 1,
+            }
+        )
+
+    def test_admin_direct_plan_activation(self):
+        from django.urls import reverse
+        from core.models import PlanRequest, PlanRequestStatus
+
+        self.client.force_login(self.admin)
+        post_data = {
+            "action": "direct_activate_plan",
+            "student_email": "nueva_alumna@example.com",
+            "plan_id": self.plan.id,
+            "periodo": "monthly",
+        }
+        res = self.client.post(reverse("core:admin_dashboard"), post_data)
+        self.assertEqual(res.status_code, 302)
+
+        created_student = User.objects.filter(email="nueva_alumna@example.com").first()
+        self.assertIsNotNone(created_student)
+
+        plan_req = PlanRequest.objects.filter(user=created_student, plan=self.plan).first()
+        self.assertIsNotNone(plan_req)
+        self.assertEqual(plan_req.estado, PlanRequestStatus.CONFIRMED)
+
 
 
 

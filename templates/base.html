@@ -53,10 +53,10 @@
 </head>
 
 <body class="bg-crema text-charcoal antialiased">
-  <div class="bg-forest py-2.5 text-center text-xs font-semibold tracking-widest text-crema uppercase px-4 flex items-center justify-center gap-2 flex-wrap">
-    <span>📍 <strong>¡NOS CAMBIAMOS AL 4TO PISO, LOCAL 41 A PARTIR DEL LUNES 07/09!</strong></span>
+  <div class="bg-forest py-2.5 text-center text-xs font-semibold tracking-widest text-crema uppercase px-4 flex items-center justify-center gap-2 flex-wrap shadow-sm border-b border-sand/20">
+    <span>🔥 <strong>CYBER CIMA PILATES:</strong> Del Sáb 03/10 (23:59) al Mié 07/10 (23:59)</span>
     <span class="hidden sm:inline">·</span>
-    <span>📢 Agenda tu clase de prueba por solo $5.000 (Todos los Horarios)</span>
+    <a href="{% url 'core:home' %}#cyber" class="underline font-extrabold hover:text-sand">¡Ver Ofertas Increíbles aquí!</a>
   </div>
   <header class="sticky top-0 z-50 border-b border-forest/10 bg-crema/90 backdrop-blur-md" x-data="{ open: false }">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
@@ -68,13 +68,14 @@
             class="block text-[10px] font-sans tracking-[0.25em] text-sand text-right leading-none">Pilates</span></span>
       </a>
 
-      <nav class="hidden items-center gap-8 text-xs font-semibold uppercase tracking-wider text-charcoal/80 lg:flex">
+      <nav class="hidden items-center gap-7 text-xs font-semibold uppercase tracking-wider text-charcoal/80 lg:flex">
+        <a href="{% url 'core:home' %}#cyber" class="rounded-full bg-terracota/10 px-3 py-1.5 text-terracota border border-terracota/30 font-extrabold transition-all hover:bg-terracota hover:text-white">Cyber Cima 🔥</a>
         <a href="{% url 'core:home' %}#metodo" class="transition-colors hover:text-olive">Método</a>
         <a href="{% url 'core:home' %}#estudio" class="transition-colors hover:text-olive">Estudio</a>
         <a href="{% url 'core:home' %}#planes" class="transition-colors hover:text-olive">Planes</a>
         <a href="{% url 'core:home' %}#beneficios" class="transition-colors hover:text-olive">Beneficios</a>
         <a href="{% url 'core:home' %}#visita" class="transition-colors hover:text-olive">Visítanos</a>
-        <a href="{% url 'accounts:terms' %}" class="transition-colors hover:text-olive">Términos y Condiciones</a>
+        <a href="{% url 'accounts:terms' %}" class="transition-colors hover:text-olive">Términos</a>
       </nav>
 
       <nav class="hidden items-center gap-3 lg:flex text-xs font-semibold uppercase tracking-wider">
@@ -105,6 +106,8 @@
 
     <div x-show="open" x-cloak class="border-t border-olive/15 bg-ivory px-5 py-4 lg:hidden">
       <nav class="flex flex-col gap-1 text-sm font-medium text-charcoal/80">
+        <a href="{% url 'core:home' %}#cyber" @click="open=false"
+          class="rounded-xl px-3 py-2.5 font-bold text-terracota bg-terracota/10">Cyber Cima 🔥</a>
         <a href="{% url 'core:home' %}#metodo" @click="open=false"
           class="rounded-xl px-3 py-2.5 hover:bg-olive/5">Método</a>
         <a href="{% url 'core:home' %}#estudio" @click="open=false"

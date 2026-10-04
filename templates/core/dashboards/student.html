@@ -2,7 +2,7 @@
 {% block title %}Panel Alumna | Cima Pilates{% endblock %}
 {% block content %}
 <section class="mx-auto max-w-7xl px-5 py-12 lg:px-8"
-         x-data="{ openPlanModal: {{ open_plan_modal|yesno:'true,false' }}, selectedPlan: '{{ selected_plan.slug|default:'' }}', selectedPeriod: '{{ selected_period }}', metodoPago: 'presencial', submitting: false }">
+         x-data="{ openPlanModal: {{ open_plan_modal|yesno:'true,false' }}, selectedPlan: '{{ selected_plan.slug|default:'' }}', selectedPeriod: '{{ selected_period }}', metodoPago: 'transferencia', submitting: false }">
   <div class="rounded-[2rem] bg-olive p-8 text-ivory md:p-10">
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="flex items-center gap-4">
@@ -206,8 +206,8 @@
       </div>
 
       <div class="mt-6 rounded-[1.5rem] border border-olive/12 bg-ivory p-6">
-        <p class="font-medium text-charcoal">Favor dirigirte al centro de pilates para hacer el pago correspondiente por tarjeta o efectivo, o dejar los datos de transferencia.</p>
-        <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Se te enviará un correo cuando el pago haya sido confirmado. Si ya realizaste una transferencia, puedes subir el comprobante para entregar mayor información y acelerar la validación.</p>
+        <p class="font-medium text-charcoal">Por favor realiza el pago de tu plan mediante transferencia bancaria o link de pago digital (SumUp), y adjunta el comprobante para validar tu solicitud.</p>
+        <p class="mt-3 text-sm leading-relaxed text-charcoal/70">Se te enviará un correo cuando el pago haya sido confirmado. Debes adjuntar tu comprobante de pago para enviar la solicitud.</p>
       </div>
 
       <div class="mt-5 rounded-[1.5rem] border border-olive/12 bg-olive/5 p-6">
@@ -315,10 +315,15 @@
         </div>
 
         <div>
-          <label for="{{ plan_request_form.comprobante.id_for_label }}" class="text-sm font-medium text-charcoal">{{ plan_request_form.comprobante.label }}</label>
+          <label for="{{ plan_request_form.comprobante.id_for_label }}" class="text-sm font-semibold text-charcoal">
+            Comprobante de Pago <span class="text-red-600 font-bold">* Obligatorio</span>
+          </label>
           {{ plan_request_form.comprobante }}
+          <p class="mt-1.5 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+            ⚠️ <strong>Requisito obligatorio:</strong> Debes adjuntar tu comprobante de transferencia o pago en formato PDF o imagen (.jpg, .png) para enviar la solicitud.
+          </p>
           {% for error in plan_request_form.comprobante.errors %}
-            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            <p class="mt-1 text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">{{ error }}</p>
           {% endfor %}
         </div>
 
