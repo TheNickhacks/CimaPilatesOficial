@@ -13,7 +13,7 @@
         <div>
           <!-- Modal Pop-up: Cyber Cima Deals -->
           <div x-data="{ openCyberModal: true }" x-show="openCyberModal" x-cloak
-            class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
             x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
@@ -23,11 +23,11 @@
 
             <!-- Contenido del Pop-up: Inversión de Color con Fondo Crema y Tarjetas Verde Bosque y Terracota -->
             <div
-              class="relative w-full max-w-xl overflow-hidden rounded-[2.5rem] border border-forest/20 bg-crema p-7 shadow-2xl transition-all text-charcoal z-10 text-center sm:p-9">
+              class="relative w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-[1.8rem] border border-forest/20 bg-crema p-4 shadow-2xl transition-all text-charcoal z-10 text-center sm:rounded-[2.5rem] sm:p-8 my-auto">
 
               <!-- Botón Cerrar X -->
-              <button @click="openCyberModal = false"
-                class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full border border-forest/20 bg-white/80 text-forest transition-colors hover:bg-forest hover:text-white">
+              <button @click="openCyberModal = false" type="button" aria-label="Cerrar modal"
+                class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-forest/20 bg-white/80 text-forest transition-colors hover:bg-forest hover:text-white sm:right-5 sm:top-5 sm:h-9 sm:w-9">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -35,87 +35,86 @@
 
               <!-- Insignia Cyber Verde Bosque -->
               <div
-                class="inline-flex items-center gap-2 rounded-full border border-forest/20 bg-forest px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-crema shadow-sm">
+                class="inline-flex items-center gap-1.5 rounded-full border border-forest/20 bg-forest px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-crema shadow-sm sm:gap-2 sm:px-4 sm:py-1.5 sm:text-xs">
                 <span>🔥</span> EVENTO EXCLUSIVO CYBER CIMA <span>🔥</span>
               </div>
 
               <!-- Título -->
-              <h3 class="mt-4 font-serif text-3xl font-light text-forest sm:text-4xl">
+              <h3 class="mt-2.5 font-serif text-2xl font-light text-forest sm:mt-4 sm:text-4xl">
                 ¡Ofertas Increíbles de Cyber!
               </h3>
-              <div class="mt-2">
+              <div class="mt-1.5 sm:mt-2">
                 <span
-                  class="inline-block rounded-full bg-olive/15 px-4 py-1 text-xs font-semibold text-forest border border-olive/30">
+                  class="inline-block rounded-full border border-olive/30 bg-olive/15 px-3 py-0.5 text-[10px] font-semibold text-forest sm:px-4 sm:py-1 sm:text-xs">
                   📅 Sábado 03/10 (23:59 hrs) al Miércoles 07/10 (23:59 hrs)
                 </span>
               </div>
 
-              <!-- Grid de Ofertas en Tarjetas Verde Olivo (Tono más claro) y Terracota -->
-              <div class="mt-5 grid gap-3.5 text-left sm:grid-cols-2">
+              <!-- Grid de Ofertas en Tarjetas Verde Olivo y Terracota -->
+              <div class="mt-3.5 grid gap-2.5 text-left sm:mt-5 sm:grid-cols-2 sm:gap-3.5">
                 <!-- Oferta 1: Plan Mensual 12 clases -->
                 <div
-                  class="rounded-2xl border border-olive/30 bg-olive p-4 shadow-md text-crema transition-all hover:scale-[1.02]">
+                  class="rounded-xl border border-olive/30 bg-olive p-3 text-crema shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-sand">Plan Mensual</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-sand sm:text-[10px]">Plan Mensual</span>
                     <span
-                      class="rounded-md bg-terracota px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">Oferta</span>
+                      class="rounded-md bg-terracota px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-sm sm:px-2 sm:text-[10px]">Oferta</span>
                   </div>
-                  <p class="mt-1 font-serif text-lg font-bold text-crema">12 Clases al Mes</p>
-                  <p class="mt-2 font-serif text-2xl font-extrabold text-sand">
-                    $64.990 <span class="text-xs text-crema/60 font-normal line-through">$79.990</span>
+                  <p class="mt-0.5 font-serif text-base font-bold text-crema sm:mt-1 sm:text-lg">12 Clases al Mes</p>
+                  <p class="mt-1 font-serif text-xl font-extrabold text-sand sm:mt-2 sm:text-2xl">
+                    $64.990 <span class="text-xs font-normal text-crema/60 line-through">$79.990</span>
                   </p>
                 </div>
 
                 <!-- Oferta 2: Nuevo Plan AM (Destacado en Terracota) -->
                 <div
-                  class="rounded-2xl border border-terracota bg-terracota p-4 shadow-md text-white transition-all hover:scale-[1.02] relative overflow-hidden">
+                  class="relative overflow-hidden rounded-xl border border-terracota bg-terracota p-3 text-white shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-white/90">Plan AM</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-white/90 sm:text-[10px]">Plan AM</span>
                     <span
-                      class="rounded-md bg-white text-terracota px-2 py-0.5 text-[10px] font-extrabold shadow-sm">Lanzamiento</span>
+                      class="rounded-md bg-white px-1.5 py-0.5 text-[9px] font-extrabold text-terracota shadow-sm sm:px-2 sm:text-[10px]">Lanzamiento</span>
                   </div>
-                  <p class="mt-1 font-serif text-lg font-bold text-white">Nuevo Plan AM (4 Clases)</p>
-                  <p class="mt-2 font-serif text-2xl font-extrabold text-white">
-                    $28.000 <span class="text-xs text-white/80 font-normal">/mes</span>
+                  <p class="mt-0.5 font-serif text-base font-bold text-white sm:mt-1 sm:text-lg">Nuevo Plan AM (4 Clases)</p>
+                  <p class="mt-1 font-serif text-xl font-extrabold text-white sm:mt-2 sm:text-2xl">
+                    $28.000 <span class="text-xs font-normal text-white/80">/mes</span>
                   </p>
                 </div>
 
                 <!-- Oferta 3: Plan Trimestral 8 clases -->
                 <div
-                  class="rounded-2xl border border-olive/30 bg-olive p-4 shadow-md text-crema transition-all hover:scale-[1.02]">
+                  class="rounded-xl border border-olive/30 bg-olive p-3 text-crema shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-sand">Plan Trimestral</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-sand sm:text-[10px]">Plan Trimestral</span>
                     <span
-                      class="rounded-md bg-terracota px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">Oferta</span>
+                      class="rounded-md bg-terracota px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-sm sm:px-2 sm:text-[10px]">Oferta</span>
                   </div>
-                  <p class="mt-1 font-serif text-lg font-bold text-crema">8 Clases / mes</p>
-                  <p class="mt-2 font-serif text-2xl font-extrabold text-sand">
-                    $137.990 <span class="text-xs text-crema/60 font-normal line-through">$153.990</span>
+                  <p class="mt-0.5 font-serif text-base font-bold text-crema sm:mt-1 sm:text-lg">8 Clases / mes</p>
+                  <p class="mt-1 font-serif text-xl font-extrabold text-sand sm:mt-2 sm:text-2xl">
+                    $137.990 <span class="text-xs font-normal text-crema/60 line-through">$153.990</span>
                   </p>
                 </div>
 
                 <!-- Oferta 4: Plan Trimestral 12 clases -->
                 <div
-                  class="rounded-2xl border border-olive/30 bg-olive p-4 shadow-md text-crema transition-all hover:scale-[1.02]">
+                  class="rounded-xl border border-olive/30 bg-olive p-3 text-crema shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-sand">Plan Trimestral</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-sand sm:text-[10px]">Plan Trimestral</span>
                     <span
-                      class="rounded-md bg-terracota px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">Oferta</span>
+                      class="rounded-md bg-terracota px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-sm sm:px-2 sm:text-[10px]">Oferta</span>
                   </div>
-                  <p class="mt-1 font-serif text-lg font-bold text-crema">12 Clases / mes</p>
-                  <p class="mt-2 font-serif text-2xl font-extrabold text-sand">
-                    $197.990 <span class="text-xs text-crema/60 font-normal line-through">$215.990</span>
+                  <p class="mt-0.5 font-serif text-base font-bold text-crema sm:mt-1 sm:text-lg">12 Clases / mes</p>
+                  <p class="mt-1 font-serif text-xl font-extrabold text-sand sm:mt-2 sm:text-2xl">
+                    $197.990 <span class="text-xs font-normal text-crema/60 line-through">$215.990</span>
                   </p>
                 </div>
               </div>
 
               <!-- Botones de Acción -->
-              <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+              <div class="mt-4 flex flex-col gap-3 sm:mt-6 sm:flex-row">
                 <a href="#cyber" @click="openCyberModal = false"
-                  class="w-full rounded-full bg-forest px-6 py-3.5 text-center text-xs font-extrabold uppercase tracking-wider text-crema shadow-lg transition-all hover:bg-terracota hover:scale-105 border border-forest/20">
+                  class="w-full rounded-full border border-forest/20 bg-forest px-5 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-crema shadow-lg transition-all hover:bg-terracota hover:scale-105 sm:px-6 sm:py-3.5">
                   Contrata tu plan 🔥
                 </a>
-                </button>
               </div>
             </div>
           </div>
