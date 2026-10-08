@@ -233,15 +233,10 @@ class PlanRenewalFlowTests(TestCase):
             "periodo": "monthly",
             "metodo_pago": "transferencia",
         }
-        # Request without comprobante fails
+        # Request without comprobante succeeds because comprobante is optional
         form_no_file = PlanRequestForm(data=form_data, user=self.student)
-        self.assertFalse(form_no_file.is_valid())
-        self.assertIn("comprobante", form_no_file.errors)
-
-        # First request with comprobante succeeds
-        form1 = PlanRequestForm(data=form_data, files={"comprobante": dummy_file1}, user=self.student)
-        self.assertTrue(form1.is_valid(), form1.errors)
-        form1.save()
+        self.assertTrue(form_no_file.is_valid(), form_no_file.errors)
+        form_no_file.save()
 
         # Second request within 5 minutes should fail validation gracefully
         form2 = PlanRequestForm(data=form_data, files={"comprobante": dummy_file2}, user=self.student)

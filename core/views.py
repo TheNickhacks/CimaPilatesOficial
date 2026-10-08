@@ -391,18 +391,21 @@ def _get_teacher_display_for_session(class_session, teachers=None, monthly_shift
 	if not matching_teachers:
 		return "Profesora por confirmar"
 
-	if len(matching_teachers) > 1 and shift_kind == "am":
+	if shift_kind in (TeacherShiftKind.AM, "am"):
 		weekday = local_start.weekday()
-		# Martes (1) y Miercoles (2) -> Benjamín
-		if weekday in (1, 2):
+		# Lunes (0), Jueves (3) y Viernes (4) -> Profesora Isidora Montero (no considerando al profesor Benjamín)
+		if weekday in (0, 3, 4):
+			isidora_teacher = next((t for t in matching_teachers if "isidor" in (t.get_full_name() or t.email).lower()), None)
+			if not isidora_teacher and teachers:
+				isidora_teacher = next((t for t in teachers if "isidor" in (t.get_full_name() or t.email).lower()), None)
+			if isidora_teacher:
+				return isidora_teacher.get_full_name() or isidora_teacher.email
+			return "Isidora Montero"
+		# Martes (1) y Miércoles (2) -> Benjamín
+		elif weekday in (1, 2):
 			benjamin_teacher = next((t for t in matching_teachers if "benjam" in (t.get_full_name() or t.email).lower()), None)
 			if benjamin_teacher:
 				return benjamin_teacher.get_full_name() or benjamin_teacher.email
-		# Lunes (0), Jueves (3) y Viernes (4) -> Yasmín
-		elif weekday in (0, 3, 4):
-			yasmin_teacher = next((t for t in matching_teachers if "yasm" in (t.get_full_name() or t.email).lower()), None)
-			if yasmin_teacher:
-				return yasmin_teacher.get_full_name() or yasmin_teacher.email
 
 	return ", ".join((t.get_full_name() or t.email) for t in matching_teachers)
 

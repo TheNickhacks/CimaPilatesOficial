@@ -76,11 +76,8 @@ class PlanRequestForm(forms.Form):
 		widget=forms.Textarea(attrs={"rows": 3}),
 	)
 	comprobante = forms.FileField(
-		label="Subir comprobante de pago *",
-		required=True,
-		error_messages={
-			"required": "Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan."
-		},
+		label="Subir comprobante de pago",
+		required=False,
 	)
 
 	def __init__(self, *args, user=None, **kwargs):
@@ -98,7 +95,6 @@ class PlanRequestForm(forms.Form):
 			{
 				"class": "mt-2 block w-full rounded-2xl border border-dashed border-olive/20 bg-ivory px-4 py-3 text-sm text-charcoal",
 				"accept": ".pdf,.png,.jpg,.jpeg,.webp",
-				"required": "required",
 			}
 		)
 		self.plan = None
@@ -112,15 +108,10 @@ class PlanRequestForm(forms.Form):
 		return slug
 
 	def clean_comprobante(self):
-		comprobante = self.cleaned_data.get("comprobante")
-		if not comprobante:
-			raise forms.ValidationError("Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan.")
-		return comprobante
+		return self.cleaned_data.get("comprobante")
 
 	def clean(self):
 		cleaned_data = super().clean()
-		if not self.files.get("comprobante") and not cleaned_data.get("comprobante"):
-			self.add_error("comprobante", "Es obligatorio adjuntar el comprobante de pago para enviar la solicitud de plan.")
 		if self.user:
 			from django.utils import timezone
 			from datetime import timedelta

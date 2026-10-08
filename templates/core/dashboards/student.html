@@ -206,8 +206,8 @@
       </div>
 
       <div class="mt-4 rounded-[1.2rem] border border-olive/12 bg-ivory p-4 sm:mt-6 sm:rounded-[1.5rem] sm:p-6">
-        <p class="text-xs font-medium text-charcoal sm:text-base">Por favor realiza el pago de tu plan mediante transferencia bancaria o link de pago digital (SumUp), y adjunta el comprobante para validar tu solicitud.</p>
-        <p class="mt-2 text-xs leading-relaxed text-charcoal/70 sm:mt-3 sm:text-sm">Se te enviará un correo cuando el pago haya sido confirmado. Debes adjuntar tu comprobante de pago para enviar la solicitud.</p>
+        <p class="text-xs font-medium text-charcoal sm:text-base">Por favor realiza el pago de tu plan mediante transferencia bancaria o link de pago digital (SumUp), y puedes adjuntar el comprobante para agilizar la validación.</p>
+        <p class="mt-2 text-xs leading-relaxed text-charcoal/70 sm:mt-3 sm:text-sm">Se te enviará un correo cuando el pago haya sido confirmado. Si lo deseas, puedes adjuntar tu comprobante de pago al enviar la solicitud.</p>
       </div>
 
       <div class="mt-4 rounded-[1.2rem] border border-olive/12 bg-olive/5 p-4 sm:mt-5 sm:rounded-[1.5rem] sm:p-6">
@@ -316,11 +316,11 @@
 
         <div>
           <label for="{{ plan_request_form.comprobante.id_for_label }}" class="text-sm font-semibold text-charcoal">
-            Comprobante de Pago <span class="text-red-600 font-bold">* Obligatorio</span>
+            Comprobante de Pago <span class="text-charcoal/50 text-xs font-normal">(Opcional)</span>
           </label>
           {{ plan_request_form.comprobante }}
-          <p class="mt-1.5 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-            ⚠️ <strong>Requisito obligatorio:</strong> Debes adjuntar tu comprobante de transferencia o pago en formato PDF o imagen (.jpg, .png) para enviar la solicitud.
+          <p class="mt-1.5 text-xs text-olive/80 bg-olive/5 p-2.5 rounded-xl border border-olive/15">
+            💡 <strong>Opcional:</strong> Si ya realizaste la transferencia o pago digital, adjunta tu comprobante (.pdf, .jpg, .png) para agilizar la validación.
           </p>
           {% for error in plan_request_form.comprobante.errors %}
             <p class="mt-1 text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">{{ error }}</p>

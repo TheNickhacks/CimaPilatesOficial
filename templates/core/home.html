@@ -11,7 +11,7 @@
       <div class="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
         <!-- Columna Izquierda: Texto y Características -->
         <div>
-          <!-- Modal Pop-up: Cyber Cima Deals -->
+          {% comment "Modal Pop-up: Cyber Cima Deals (Comentado para eventos futuros)" %}
           <div x-data="{ openCyberModal: true }" x-show="openCyberModal" x-cloak
             class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
             x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
@@ -114,6 +114,102 @@
                 <a href="#cyber" @click="openCyberModal = false"
                   class="w-full rounded-full border border-forest/20 bg-forest px-5 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-crema shadow-lg transition-all hover:bg-terracota hover:scale-105 sm:px-6 sm:py-3.5">
                   Contrata tu plan 🔥
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endcomment %}
+
+          <!-- Modal Pop-up: Clases de Prueba y Sueltas (Mismas Dimensiones) -->
+          <div x-data="{ openSingleClassModal: true }" x-show="openSingleClassModal" x-cloak
+            class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+
+            <!-- Overlay / Fondo oscurecido -->
+            <div class="fixed inset-0 bg-charcoal/80 backdrop-blur-md" @click="openSingleClassModal = false"></div>
+
+            <!-- Contenido del Pop-up: Inversión de Color con Fondo Crema y Tarjetas Verde Bosque y Terracota (Mismas dimensiones) -->
+            <div
+              class="relative w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-[1.8rem] border border-forest/20 bg-crema p-4 shadow-2xl transition-all text-charcoal z-10 text-center sm:rounded-[2.5rem] sm:p-8 my-auto">
+
+              <!-- Botón Cerrar X -->
+              <button @click="openSingleClassModal = false" type="button" aria-label="Cerrar modal"
+                class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-forest/20 bg-white/80 text-forest transition-colors hover:bg-forest hover:text-white sm:right-5 sm:top-5 sm:h-9 sm:w-9">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <!-- Insignia Verde Bosque -->
+              <div
+                class="inline-flex items-center gap-1.5 rounded-full border border-forest/20 bg-forest px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-crema shadow-sm sm:gap-2 sm:px-4 sm:py-1.5 sm:text-xs">
+                <span>✨</span> VIVE LA EXPERIENCIA CIMA <span>✨</span>
+              </div>
+
+              <!-- Título -->
+              <h3 class="mt-2.5 font-serif text-2xl font-light text-forest sm:mt-4 sm:text-4xl">
+                Clases de Prueba y Sueltas
+              </h3>
+              <p class="mt-1.5 text-xs text-charcoal/75 sm:mt-2 sm:text-sm leading-relaxed max-w-sm mx-auto">
+                Prueba nuestro estudio boutique de Reformer en Puente Alto con una clase individual sin compromisos.
+              </p>
+
+              <!-- Grid de Opciones en Tarjetas Verde Olivo y Terracota -->
+              <div class="mt-3.5 grid gap-2.5 text-left sm:mt-5 sm:grid-cols-2 sm:gap-3.5">
+                <!-- Opción 1: Clase de Prueba (Terracota) -->
+                <div
+                  class="relative overflow-hidden rounded-xl border border-terracota bg-terracota p-3 text-white shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-[9px] font-bold uppercase tracking-wider text-white/90 sm:text-[10px]">Primera Visita</span>
+                      <span
+                        class="rounded-md bg-white px-1.5 py-0.5 text-[9px] font-extrabold text-terracota shadow-sm sm:px-2 sm:text-[10px]">Promocional</span>
+                    </div>
+                    <p class="mt-0.5 font-serif text-base font-bold text-white sm:mt-1 sm:text-lg">Clase de Prueba</p>
+                    <p class="mt-1 font-serif text-2xl font-extrabold text-white sm:mt-2 sm:text-3xl">
+                      $5.000
+                    </p>
+                    <p class="mt-1.5 text-[11px] text-white/90 leading-tight">
+                      Exclusivo para nuevas alumnas (1 por RUT). Habilitado en horario AM y sábados.
+                    </p>
+                  </div>
+                  <a href="{% url 'core:public_single_class_booking' %}?tipo=prueba" @click="openSingleClassModal = false"
+                    class="mt-3 block w-full rounded-full bg-white px-3 py-2 text-center text-xs font-extrabold uppercase tracking-wider text-terracota shadow transition-all hover:bg-crema sm:py-2.5">
+                    Agendar Prueba $5.000
+                  </a>
+                </div>
+
+                <!-- Opción 2: Clase Suelta (Verde Olivo) -->
+                <div
+                  class="rounded-xl border border-olive/30 bg-olive p-3 text-crema shadow-md transition-all hover:scale-[1.01] sm:rounded-2xl sm:p-4 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-[9px] font-bold uppercase tracking-wider text-sand sm:text-[10px]">Sin Contrato</span>
+                      <span
+                        class="rounded-md bg-sand/20 px-1.5 py-0.5 text-[9px] font-extrabold text-sand shadow-sm sm:px-2 sm:text-[10px]">Ocasional</span>
+                    </div>
+                    <p class="mt-0.5 font-serif text-base font-bold text-crema sm:mt-1 sm:text-lg">Clase Suelta</p>
+                    <p class="mt-1 font-serif text-2xl font-extrabold text-sand sm:mt-2 sm:text-3xl">
+                      $9.990
+                    </p>
+                    <p class="mt-1.5 text-[11px] text-crema/80 leading-tight">
+                      Ideal si quieres asistir ocasionalmente. Vigencia de 30 días en todos los horarios.
+                    </p>
+                  </div>
+                  <a href="{% url 'core:public_single_class_booking' %}?tipo=suelta" @click="openSingleClassModal = false"
+                    class="mt-3 block w-full rounded-full bg-forest px-3 py-2 text-center text-xs font-extrabold uppercase tracking-wider text-crema shadow transition-all hover:bg-terracota sm:py-2.5">
+                    Agendar Suelta $9.990
+                  </a>
+                </div>
+              </div>
+
+              <!-- Enlace Secundario -->
+              <div class="mt-4 sm:mt-5 text-center">
+                <a href="#planes" @click="openSingleClassModal = false"
+                  class="inline-block text-xs font-bold uppercase tracking-wider text-forest underline hover:text-terracota transition-colors">
+                  Ver Planes Mensuales y Trimestrales →
                 </a>
               </div>
             </div>
@@ -371,7 +467,7 @@
     </div>
   </section>
 
-  <!-- CYBER CIMA SECCIÓN DE OFERTAS EXCLUSIVAS (Entonado al mismo estilo del Pop-up) -->
+  {% comment "CYBER CIMA SECCIÓN DE OFERTAS EXCLUSIVAS (Comentado para eventos futuros)" %}
   <section id="cyber" class="bg-crema text-charcoal border-t border-forest/10 py-16 lg:py-24">
     <div class="mx-auto max-w-7xl px-5 lg:px-8" x-data="{
       guestBase: '{% url 'accounts:signup_student' %}',
@@ -500,6 +596,7 @@
       </div>
     </div>
   </section>
+  {% endcomment %}
 
   <!-- 6. PLANES & PRICING -->
   <section id="planes" class="bg-sage text-charcoal border-t border-forest/5">
